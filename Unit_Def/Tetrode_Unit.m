@@ -1,4 +1,4 @@
-classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops because it will be easy to add properties 
+classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops because it will be easy to add properties
 
     %UNTITLED3 Summary of this class goes here
     %   Detailed explanation goes here
@@ -8,19 +8,25 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
         Exp_Date % Date of experiment, something like'29-Oct-2022';
         Tract % which tract, 1, 2, or 3
         Recording_Depth % depth in um, integer
+        Unit_Name_Long % Name of the unit, used for plotting, files, etc
+
         Cannula_Position % endup postion of the cannula, structure with 3 fields, AP, ML, DV
         Distance_to_L1 % distance to layer1 piriform, um
+
+        st %Spike_Time
+        Unit_Quality
+        Unit_Identity
+        cid % unit id in Phy
+
         Baseline_ms
         Baseling_Phase_Uniform
         Baseling_Phase_Wrap
         Resultant_Vector_Uniform
         Resultant_Vector_Wrap
-        st %Spike_Time
-        Unit_Quality
-        Unit_Identity
-        cid % unit id in Phy
+
+        Sniff_Locked = nan;
         %         Light_Evoked
-        Unit_Name_Long
+
         Intan_File
         Spike_File
         Intan_Clip
@@ -30,9 +36,11 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
     methods
         function tet_unit = Tetrode_Unit()
             addpath 'C:\Users\yycxx\OneDrive - OIST\Ephys_Code\Common_Functions'
-%             tet_unit.Unit_Name_Long = sprintf('%s_Tract%d_Depth%d_%s_unit%d',obj.Mouse_ID,obj.Tract,Recording_Depth,Stimuli_Type,j_cid);
+            %             tet_unit.Unit_Name_Long = sprintf('%s_Tract%d_Depth%d_%s_unit%d',obj.Mouse_ID,obj.Tract,Recording_Depth,Stimuli_Type,j_cid);
         end
+
         function [bins_base, fr_base] = baseline_sniff_ms(obj,varargin)
+
             if ~isempty(varargin)
                 option = varargin{1}; % parameters supplied by user
             else
@@ -45,52 +53,51 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
             saveplot = getOr(option, 'saveplot', 0);
             baseline_sniff_onset = obj.Spontaneous_SniffOnset;
             spiketime = obj.st;
-            
+
             [psth_base, bins_base, rasterX_SP, rasterY_SP, spikeCounts_SP, ba_SP] = psthAndBA(spiketime, baseline_sniff_onset, calcWindow, binSize);
             psth_base = psth_base*binSize;
             fr_base = psth_base/binSize;
             obj = obj.update("Baseline_ms",bins_base,fr_base);
             if isplot
                 figure
-                
+
                 plot(bins_base,fr_base,'k')
                 title(sprintf("Baseline Sniff Coupling of Unit%d",cluster_id))
                 xlabel("Time from sniff onset(s)")
                 ylabel(sprintf("Firing Rate (Hz) bin = %3gs",binSize))
                 if saveplot
                     saveas(gcf,sprintf("%s_%s_%s_ms.jpg",obj.Mouse_ID,obj.Intan_File,obj.Cannula_Position))
-                    
+
                 end
             end
         end
-        function [bins_base, fr_base] = baseline_sniff_phase(obj,varargin)
+        function [bins_base, fr_base] = get_baseline_sniff_phase_uniform(obj,varargin)
             if ~isempty(varargin)
                 option = varargin{1}; % parameters supplied by user
             else
                 option = [];
             end
-            cluster_id = obj.cid;
-
-            binSize = getOr(option, 'binSize', 0.01*2*pi);
             isplot = getOr(option, 'isplot', 0);
             saveplot = getOr(option, 'saveplot', 0);
+            update = getOr(option, 'update', 1);
             baseline_sniff_onset = obj.Spontaneous_SniffOnset;
             spiketime = obj.st;
             plotWindow_phase = getOr(option, 'plotWindow_phase', [0, 2*pi]);
-            calcWindow_each_cycle = diff(baseline_sniff_onset);
-            % █ █▀▄▀█ █▀█ █▀█ █▀█ ▀█▀ ▄▀█ █▄░█ ▀█▀
-            % █ █░▀░█ █▀▀ █▄█ █▀▄ ░█░ █▀█ █░▀█ ░█░
-            % the window will be an array of sniff durations
-%             [psth_base, bins_base, rasterX_SP, rasterY_SP, spikeCounts_SP, ba_SP] = psthAndBA(spiketime, baseline_sniff_onset, calcWindow, binSize);
-
-            [psth_base, bins_base, rasterX_SP, rasterY_SP, spikeCounts_SP, ba_SP] = phase_normed_psthAndBA(spiketime, baseline_sniff_onset, calcWindow_each_cycle, binSize);
-            psth_base = psth_base*binSize;
-            fr_base = psth_base/(binSize/2/pi);
+            if ~update
+                bins_base = obj.Baseling_Phase_Uniform{1};
+                fr_base = obj.Baseling_Phase_Uniform{2};
+            else
+                [bins_base, fr_base] = baseline_sniff_phase_uniform(baseline_sniff_onset,spiketime,varargin);
+                % calculate the resultant vector
+                resultant_vector = calculate_resultant_vector(bins_base,fr_base);
+                obj.Resultant_Vector_Uniform = resultant_vector;
+            end
             obj = obj.update("Baseling_Phase_Uniform",bins_base,fr_base);
+
             if isplot
                 figure
-                
                 plot(bins_base,fr_base,'k')
+                cluster_id = obj.cid;
                 title(sprintf("Baseline Sniff Coupling of Unit%d",cluster_id))
                 xlabel("Phase in sniff cycle")
                 ylabel(["Firing Rate (spike/cycle)",sprintf("bin = %3g*2pi",binSize/2/pi)])
@@ -100,6 +107,88 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
                     saveas(gcf,sprintf("%s_%s_%s_phase.jpg",obj.Mouse_ID,obj.Intan_File,obj.Cannula_Position))
                 end
             end
+        end
+        %         function [bins_base, fr_base] = baseline_sniff_phase_uniform(obj,varargin)
+        %             if ~isempty(varargin)
+        %                 option = varargin{1}; % parameters supplied by user
+        %             else
+        %                 option = [];
+        %             end
+        %             cluster_id = obj.cid;
+        %
+        %             binSize = getOr(option, 'binSize', 0.01*2*pi);
+        %             isplot = getOr(option, 'isplot', 0);
+        %             saveplot = getOr(option, 'saveplot', 0);
+        %             baseline_sniff_onset = obj.Spontaneous_SniffOnset;
+        %             spiketime = obj.st;
+        %             plotWindow_phase = getOr(option, 'plotWindow_phase', [0, 2*pi]);
+        %             calcWindow_each_cycle = diff(baseline_sniff_onset);
+        %             % █ █▀▄▀█ █▀█ █▀█ █▀█ ▀█▀ ▄▀█ █▄░█ ▀█▀
+        %             % █ █░▀░█ █▀▀ █▄█ █▀▄ ░█░ █▀█ █░▀█ ░█░
+        %             % the window will be an array of sniff durations
+        %             %             [psth_base, bins_base, rasterX_SP, rasterY_SP, spikeCounts_SP, ba_SP] = psthAndBA(spiketime, baseline_sniff_onset, calcWindow, binSize);
+        %
+        %             [psth_base, bins_base, rasterX_SP, rasterY_SP, spikeCounts_SP, ba_SP] = phase_normed_psthAndBA(spiketime, baseline_sniff_onset, calcWindow_each_cycle, binSize);
+        %             psth_base = psth_base*binSize;
+        %             fr_base = psth_base/(binSize/2/pi);
+        %             obj = obj.update("Baseling_Phase_Uniform",bins_base,fr_base);
+        %             if isplot
+        %                 figure
+        %                 plot(bins_base,fr_base,'k')
+        %                 title(sprintf("Baseline Sniff Coupling of Unit%d",cluster_id))
+        %                 xlabel("Phase in sniff cycle")
+        %                 ylabel(["Firing Rate (spike/cycle)",sprintf("bin = %3g*2pi",binSize/2/pi)])
+        %                 set(gca,'XTick',0:pi/2:2*pi)
+        %                 set(gca,'XTickLabel', {'0','\pi/2','\pi','3\pi/2','2\pi'});
+        %                 if saveplot
+        %                     saveas(gcf,sprintf("%s_%s_%s_phase.jpg",obj.Mouse_ID,obj.Intan_File,obj.Cannula_Position))
+        %                 end
+        %             end
+        %             % calculate the resultant vector
+        %             resultant_vector = calculate_resultant_vector(bins_base,fr_base);
+        %             obj = obj.update("Resultant_Vector_Uniform",resultant_vector);
+        %         end
+        function iscoupled = get_sniff_lock(obj,varargin)
+            if ~isempty(varargin)
+                option = varargin{1}; % parameters supplied by user
+            else
+                option = [];
+            end
+            update = getOr(option, 'update', 1);
+            if ~update
+                iscoupled = obj.Sniff_Locked;
+            else
+                sniff_onsets = obj.Spontaneous_SniffOnset;
+                spiketime = obj.st;
+                % check_sniff_locking
+                iscoupled = check_sniff_locking(spiketime, sniff_onsets, option);
+                obj.Sniff_Locked = iscoupled;
+            end
+
+        end
+        function neurontype = get_neurontype(obj,varargin)
+            if ~isempty(varargin)
+                option = varargin{1}; % parameters supplied by user
+            else
+                option = [];
+            end
+            update = getOr(option, 'update', 0);
+
+            if ~update
+                neurontype = obj.Unit_Identity; % return the existing value is no need to update
+            else
+                if obj.Sniff_Locked % if the unit is sniff coupled
+                    % get neurontype from the baseline sniff coupling
+                    timesteps = obj.Baseline_ms{1};
+                    APs = obj.Baseline_ms{2};
+                    % identify_MTC_firing_time
+                    neurontype = identify_MTC_firing_time(timesteps,APs,option);
+                    obj.Unit_Identity = neurontype;
+                else % neurontype "o" if the unit is not MTC.
+                    obj.Unit_Identity = "o";
+                end
+            end
+
         end
         function obj = update(obj,ppt ,varargin)
             p = length(varargin);
