@@ -1,0 +1,1 @@
+stim_grouped = sort_light_stimuli(Stimuli_Info)
