@@ -6,16 +6,19 @@ else
 end
 for j = 1:length(stim_grouped)
     eventtime = stim_grouped(j).TrailOnset;
-    trial_latency = stim_grouped(j).LatencyFromCalculatedSniffOnset_ms; 
+    trial_latency = stim_grouped(j).LatencyFromCalculatedSniffOnset_ms;
     calcWindow = getOr(option, 'calcWindow', [0, 0.1]);
     binSize = getOr(option, 'binSize', 0.01*(calcWindow(2)-calcWindow(1)));
     isplot = getOr(option, 'isplot', 0);
+    plotevoked = getOr(option, 'plotevoked', 0);
     saveplot = getOr(option, 'saveplot', 0);
-
+    %% when light present
     [psth_base, bins_base, ~, ~, ~, ~] = psthAndBA(spiketime, eventtime, calcWindow, binSize);
     psth_base = psth_base*binSize;
     fr_base = psth_base/binSize;
+
     % plot(bins_base,fr_base)
+    %% before light
     eventtime0 = nan(size(eventtime));
     % as comperation, get the psth usinglast sniff. same onset latency
     for i = 1:length(eventtime)
@@ -29,8 +32,19 @@ for j = 1:length(stim_grouped)
     fr_base0 = psth_base0/binSize;
 
     if ~isnan(ttest(fr_base,fr_base0))
-        if(ttest(fr_base,fr_base0)) ==1
-            light_evoked_group(j) = 1;
+        if(ttest(fr_base,fr_base0)) ==1 % light response different from the baseline
+            if sum(fr_base)>sum(fr_base0) % if firing rate increased 
+                light_evoked_group(j) = 1;
+                if plotevoked
+                    figure
+                    plot(bins_base,fr_base)
+                    hold on
+                    plot(bins_base0,fr_base0)
+                end
+            else
+                light_evoked_group(j) = 0;
+            end
+
         else
             light_evoked_group(j) = 0;
         end
@@ -43,8 +57,9 @@ for j = 1:length(stim_grouped)
         hold on
         plot(bins_base0,fr_base0)
     end
+
 end
 
 % light_evoked_grouped = any(light_evoked_group);
 
- light_evoked_grouped = light_evoked_group;
+light_evoked_grouped = light_evoked_group;
