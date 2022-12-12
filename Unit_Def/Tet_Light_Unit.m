@@ -1,6 +1,7 @@
 classdef Tet_Light_Unit < Tetrode_Unit
     properties %
-        Stimuli_Info
+        Stimuli_Info % stimuli, unsorted
+        Stimuli_Grouped % a sructure of odour stimuli. 
         Light_Response % a structure with grouped stimuli and response.
         % -1 for inhibitatory response, 0 for not responding and 1 for
         % excitatory response. By default, the odour need to be presented
@@ -18,7 +19,7 @@ classdef Tet_Light_Unit < Tetrode_Unit
             end
             spiketime = obj.st;
             sniff_spon = obj.Spontaneous_SniffOnset;
-            stim_group = stim_grouped(1);
+            %%%%%%%%%%%%%%%%%%% this need to be fixed
             light_response = check_light_response(spiketime,stim_grouped,sniffonsets, sniffonsets,option);
             obj.update("Light_Response",light_response,stim_grouped);
             obj.is_light_evoked;

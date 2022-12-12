@@ -1,6 +1,7 @@
 classdef    Tet_Odour_Unit < Tetrode_Unit
     properties
-        Stimuli_Info % a sructure of odour stimuli. 
+        Stimuli_Info % stimuli, unsorted
+        Stimuli_Grouped % a sructure of odour stimuli. 
         Odour_Response % a structure with grouped stimuli and response. 
         % -1 for inhibitatory response, 0 for not responding and 1 for
         % excitatory response. By default, the odour need to be presented
@@ -33,7 +34,7 @@ classdef    Tet_Odour_Unit < Tetrode_Unit
                         odour_evoked = 0;
                     end
                 end
-                obj.Light_Evoked = odour_evoked;
+                obj.Odour_Evoked = odour_evoked;
         end
         function obj = untitled15(inputArg1,inputArg2)
             %UNTITLED15 Construct an instance of this class
