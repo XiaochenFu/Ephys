@@ -19,8 +19,7 @@ classdef Tet_Light_Unit < Tetrode_Unit
             end
             spiketime = obj.st;
             sniff_spon = obj.Spontaneous_SniffOnset;
-            %%%%%%%%%%%%%%%%%%% this need to be fixed
-            light_response = check_light_response(spiketime,stim_grouped,sniffonsets, sniffonsets,option);
+            light_response = check_light_response(spiketime,stim_grouped,sniffonsets,option);
             obj.update("Light_Response",light_response,stim_grouped);
             obj.is_light_evoked;
             %             obj.Light_Evoked = light_evoked;

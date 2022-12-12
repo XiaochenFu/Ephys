@@ -1,12 +1,12 @@
-function light_evoked_grouped = check_light_response(spiketime,stim_grouped,sniff_onset, trial_latency, varargin)
+function light_evoked_grouped = check_light_response(spiketime,stim_grouped,sniff_onset, varargin)
 if ~isempty(varargin)
     option = varargin{1}; % parameters supplied by user
 else
     option = [];
 end
 for j = 1:length(stim_grouped)
-    eventtime = stim_grouped.TrailOnset;
-
+    eventtime = stim_grouped(j).TrailOnset;
+    trial_latency = stim_grouped(j).LatencyFromCalculatedSniffOnset_ms; 
     calcWindow = getOr(option, 'calcWindow', [0, 0.1]);
     binSize = getOr(option, 'binSize', 0.01*(calcWindow(2)-calcWindow(1)));
     isplot = getOr(option, 'isplot', 0);
@@ -37,10 +37,14 @@ for j = 1:length(stim_grouped)
     else
         light_evoked_group(j) = 0;
     end
+    if isplot
+        figure
+        plot(bins_base,fr_base)
+        hold on
+        plot(bins_base0,fr_base0)
+    end
 end
 
-    light_evoked_grouped = any(light_evoked_group);
-    figure 
-    plot(bins_base,fr_base)
-    hold on 
-    plot(bins_base0,fr_base0)
+% light_evoked_grouped = any(light_evoked_group);
+
+ light_evoked_grouped = light_evoked_group;
