@@ -108,46 +108,6 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
                 end
             end
         end
-        %         function [bins_base, fr_base] = baseline_sniff_phase_uniform(obj,varargin)
-        %             if ~isempty(varargin)
-        %                 option = varargin{1}; % parameters supplied by user
-        %             else
-        %                 option = [];
-        %             end
-        %             cluster_id = obj.cid;
-        %
-        %             binSize = getOr(option, 'binSize', 0.01*2*pi);
-        %             isplot = getOr(option, 'isplot', 0);
-        %             saveplot = getOr(option, 'saveplot', 0);
-        %             baseline_sniff_onset = obj.Spontaneous_SniffOnset;
-        %             spiketime = obj.st;
-        %             plotWindow_phase = getOr(option, 'plotWindow_phase', [0, 2*pi]);
-        %             calcWindow_each_cycle = diff(baseline_sniff_onset);
-        %             % █ █▀▄▀█ █▀█ █▀█ █▀█ ▀█▀ ▄▀█ █▄░█ ▀█▀
-        %             % █ █░▀░█ █▀▀ █▄█ █▀▄ ░█░ █▀█ █░▀█ ░█░
-        %             % the window will be an array of sniff durations
-        %             %             [psth_base, bins_base, rasterX_SP, rasterY_SP, spikeCounts_SP, ba_SP] = psthAndBA(spiketime, baseline_sniff_onset, calcWindow, binSize);
-        %
-        %             [psth_base, bins_base, rasterX_SP, rasterY_SP, spikeCounts_SP, ba_SP] = phase_normed_psthAndBA(spiketime, baseline_sniff_onset, calcWindow_each_cycle, binSize);
-        %             psth_base = psth_base*binSize;
-        %             fr_base = psth_base/(binSize/2/pi);
-        %             obj = obj.update("Baseling_Phase_Uniform",bins_base,fr_base);
-        %             if isplot
-        %                 figure
-        %                 plot(bins_base,fr_base,'k')
-        %                 title(sprintf("Baseline Sniff Coupling of Unit%d",cluster_id))
-        %                 xlabel("Phase in sniff cycle")
-        %                 ylabel(["Firing Rate (spike/cycle)",sprintf("bin = %3g*2pi",binSize/2/pi)])
-        %                 set(gca,'XTick',0:pi/2:2*pi)
-        %                 set(gca,'XTickLabel', {'0','\pi/2','\pi','3\pi/2','2\pi'});
-        %                 if saveplot
-        %                     saveas(gcf,sprintf("%s_%s_%s_phase.jpg",obj.Mouse_ID,obj.Intan_File,obj.Cannula_Position))
-        %                 end
-        %             end
-        %             % calculate the resultant vector
-        %             resultant_vector = calculate_resultant_vector(bins_base,fr_base);
-        %             obj = obj.update("Resultant_Vector_Uniform",resultant_vector);
-        %         end
         function iscoupled = get_sniff_lock(obj,varargin)
             if ~isempty(varargin)
                 option = varargin{1}; % parameters supplied by user
@@ -178,11 +138,15 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
                 neurontype = obj.Unit_Identity; % return the existing value is no need to update
             else
                 if obj.Sniff_Locked % if the unit is sniff coupled
-                    % get neurontype from the baseline sniff coupling
-                    timesteps = obj.Baseline_ms{1};
-                    APs = obj.Baseline_ms{2};
-                    % identify_MTC_firing_time
-                    neurontype = identify_MTC_firing_time(timesteps,APs,option);
+                    %                     %% get neurontype from the baseline sniff coupling
+                    %                     timesteps = obj.Baseline_ms{1};
+                    %                     APs = obj.Baseline_ms{2};
+                    %                     % identify_MTC_firing_time
+                    %                     neurontype = identify_MTC_firing_time(timesteps,APs,option);
+                    %                     obj.Unit_Identity = neurontype;
+                    %%  get neuron type using resultant vector
+                    resultant_vector = obj.Resultant_Vector_Uniform;
+                    neurontype = identify_MTC_resultant_vector(resultant_vector,option);
                     obj.Unit_Identity = neurontype;
                 else % neurontype "o" if the unit is not MTC.
                     obj.Unit_Identity = "o";
