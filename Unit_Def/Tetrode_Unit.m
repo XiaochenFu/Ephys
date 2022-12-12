@@ -89,7 +89,7 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
             else
                 [bins_base, fr_base] = baseline_sniff_phase_uniform(baseline_sniff_onset,spiketime,varargin);
                 % calculate the resultant vector
-                resultant_vector = calculate_resultant_vector(bins_base,fr_base);
+                resultant_vector = calculate_resultant_vector_norm(bins_base,fr_base);
                 obj.Resultant_Vector_Uniform = resultant_vector;
             end
             obj = obj.update("Baseling_Phase_Uniform",bins_base,fr_base);
