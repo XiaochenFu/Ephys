@@ -34,13 +34,22 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
     end
 
     methods
-        function tet_unit = Tetrode_Unit()
+        % tet_unit = Tetrode_Unit() % create a new unit object
+        % [bins_base, fr_base] = baseline_sniff_ms(obj,varargin) % calculate the baseline sniff coupling in ms
+        % [bins_base, fr_base] = get_baseline_sniff_phase_uniform(obj,varargin) % calculate the baseline sniff coupling in phase
+        % iscoupled = get_sniff_lock(obj,varargin) % check if unit is sniff coupled
+        % neurontype = get_neurontype(obj,varargin) % check if unit is MC or TC or others
+        % obj = update(obj,ppt ,varargin) % update the property of a unit
+
+        function tet_unit = Tetrode_Unit() % create a new unit object
             addpath 'C:\Users\yycxx\OneDrive - OIST\Ephys_Code\Common_Functions'
             %             tet_unit.Unit_Name_Long = sprintf('%s_Tract%d_Depth%d_%s_unit%d',obj.Mouse_ID,obj.Tract,Recording_Depth,Stimuli_Type,j_cid);
         end
 
-        function [bins_base, fr_base] = baseline_sniff_ms(obj,varargin)
-
+        function [bins_base, fr_base] = baseline_sniff_ms(obj,varargin) % calculate the baseline sniff coupling in ms
+            if length(varargin)>1
+                error("check")
+            end
             if ~isempty(varargin)
                 option = varargin{1}; % parameters supplied by user
             else
@@ -71,7 +80,10 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
                 end
             end
         end
-        function [bins_base, fr_base] = get_baseline_sniff_phase_uniform(obj,varargin)
+        function [bins_base, fr_base] = get_baseline_sniff_phase_uniform(obj,varargin) % calculate the baseline sniff coupling in phase
+            if length(varargin)>1
+                error("check")
+            end
             if ~isempty(varargin)
                 option = varargin{1}; % parameters supplied by user
             else
@@ -108,7 +120,10 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
                 end
             end
         end
-        function iscoupled = get_sniff_lock(obj,varargin)
+        function iscoupled = get_sniff_lock(obj,varargin) % check if unit is sniff coupled
+            if length(varargin)>1
+                error("check")
+            end
             if ~isempty(varargin)
                 option = varargin{1}; % parameters supplied by user
             else
@@ -126,7 +141,10 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
             end
 
         end
-        function neurontype = get_neurontype(obj,varargin)
+        function neurontype = get_neurontype(obj,varargin) % check if unit is MC or TC or others
+            if length(varargin)>1
+                error("check")
+            end
             if ~isempty(varargin)
                 option = varargin{1}; % parameters supplied by user
             else
@@ -154,7 +172,7 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
             end
 
         end
-        function obj = update(obj,ppt ,varargin)
+        function obj = update(obj,ppt ,varargin) % update the property of a unit
             p = length(varargin);
             if p>1
                 for j = 1:p
@@ -163,11 +181,7 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
             else
                 obj.(ppt) = varargin;
             end
-
         end
-
-
-
         function obj = untitled3(inputArg1,inputArg2)
             %UNTITLED3 Construct an instance of this class
             %   Detailed explanation goes here
