@@ -1,4 +1,4 @@
-function light_evoked_grouped = check_odour_response(spiketime,stim_grouped, varargin)
+function odour_evoked_grouped = check_odour_response(spiketime,stim_grouped, varargin)
 % FV opened for 1.5s
 % Calculate the mean firing rate of each unit with (defalut 500 ms) bins
 % For 1.5s before FV opening and during the 1.5s of the FV opening,
@@ -10,7 +10,7 @@ else
     option = [];
 end
 for j = 1:length(stim_grouped)
-    eventtime = stim_grouped.TrailOnset;
+    eventtime = stim_grouped(j).TrailOnset;
 
     %     calcWindow = getOr(option, 'calcWindow', [0, 0.1]);
     calcWindow_FVon = getOr(option, 'calcWindow', [0, 1.5]);
@@ -31,17 +31,34 @@ for j = 1:length(stim_grouped)
 
     if ~isnan(ttest(fr_base,fr_base0))
         if(ttest(fr_base,fr_base0)) ==1
-            light_evoked_group(j) = 1;
+            if mean(fr_base0)<mean(fr_base) %excitatory response
+                odour_evoked_group(j) = 1;
+            else
+                odour_evoked_group(j) = -1; % inhibitatory response
+            end
         else
-            light_evoked_group(j) = 0;
+            odour_evoked_group(j) = 0;
         end
     else
-        light_evoked_group(j) = 0;
+        odour_evoked_group(j) = 0;
+    end
+    if isplot
+        figure
+        plot(bins_base,fr_base)
+        hold on
+        plot(bins_base0,fr_base0)
+        switch odour_evoked_group(j)
+            case 1
+                tt = "excitatory";
+            case 0
+                tt = "no";
+            case -1
+                tt = "inhibitory";
+        end
+        title(tt)
+
     end
 end
 
-light_evoked_grouped = any(light_evoked_group);
-figure
-plot(bins_base,fr_base)
-hold on
-plot(bins_base0,fr_base0)
+odour_evoked_grouped = odour_evoked_group;
+

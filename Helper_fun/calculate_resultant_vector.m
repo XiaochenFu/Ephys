@@ -5,7 +5,7 @@ else
     option = [];
 end
 isplot = getOr(option, 'isplot', 0);
-saveplot = getOr(option, 'saveplot', 0);
+saveplot = getOr(option, 'saveplot', 0 );
 
 % convert to polar axis
 x = spike_per_cycle.*cos(phase);
@@ -13,7 +13,9 @@ y = spike_per_cycle.*sin(phase);
 rx = mean(x);
 ry = mean(y);
 [r_phy,r_r] = cart2pol(rx,ry);
+r_phy = mod(r_phy, 2*pi);
 resultant_vector = [r_phy;r_r];
+
 % r_phy = sum(spike_per_cycle.*phase)/sum(phase) probably wrong
 % r_r = mean(spike_per_cycle) probably wrong
 

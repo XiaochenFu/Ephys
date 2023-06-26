@@ -33,7 +33,6 @@ for j = 1:length(stim_grouped)
     isplot = getOr(option, 'isplot', 0);
     plotevoked = getOr(option, 'plotevoked', 0);
     saveplot = getOr(option, 'saveplot', 0);
-    spk_threshold = getOr(option,'spk_threshold',4);
     %% when light present
     [psth_base, bins_base, ~, ~, ~, ~] = psthAndBA(spiketime, eventtime, calcWindow, binSize);
     psth_base = psth_base*binSize;
@@ -56,56 +55,50 @@ for j = 1:length(stim_grouped)
     if ~isnan(ttest(fr_base,fr_base0))
         if(ttest(fr_base,fr_base0)) ==1 % light response different from the baseline
             if sum(fr_base)>sum(fr_base0) % if firing rate increased
-                [evoked_spk,~,~,~] = light_evoked_spikes(spiketime,stim_grouped_j,option);
-                if max(cellfun(@length,evoked_spk))>spk_threshold
-                    light_evoked_group(j) = 1;
-                    if plotevoked
-                        %% raster plot
-                        figure
-                        subplot 211
-                        % lick raster for all trials
-                        [binnedArray, bins] = timestampsToBinned(spiketime, eventtime, binSize, calcWindow);
-                        % lick raster for only s plus trials
-                        [tr,b] = find(binnedArray);
-                        [rasterX,yy] = rasterize(bins(b));
-                        rasterY = yy+reshape([zeros(size(tr'));tr';zeros(size(tr'))],1,length(tr)*3); % note from XFu. The original code duplicate the dots to make the ticks longer, which I believe is cheating.
-                        rasterX(rasterY==0) = [];rasterY(rasterY==0) = [];% remove zeros
-                        plot(rasterX, rasterY,'.')
+                light_evoked_group(j) = 1;
+                if plotevoked
+                    %% raster plot
+                    figure
+                    subplot 211
+                    % lick raster for all trials
+                    [binnedArray, bins] = timestampsToBinned(spiketime, eventtime, binSize, calcWindow);
+                    % lick raster for only s plus trials
+                    [tr,b] = find(binnedArray);
+                    [rasterX,yy] = rasterize(bins(b));
+                    rasterY = yy+reshape([zeros(size(tr'));tr';zeros(size(tr'))],1,length(tr)*3); % note from XFu. The original code duplicate the dots to make the ticks longer, which I believe is cheating.
+                    rasterX(rasterY==0) = [];rasterY(rasterY==0) = [];% remove zeros
+                    plot(rasterX, rasterY,'.')
+                    hold on
+                    % plot the light stimuli
+                    pulse_num = stim_grouped_j.PulseNumber;
+                    pulse_frequency = stim_grouped_j.Frequency;
+                    pulse_width = stim_grouped_j.PulseWidth_ms;
+                    for k = 1:pulse_num
+                        x1 = 1000/pulse_frequency*(k-1); %compute the pulse onset in ms
+                        x2 = x1+pulse_width;
+                        y1 = 0;
+                        y2 = max(rasterY)+1;
+                        ylim([y1 y2])
                         hold on
-                        % plot the light stimuli
-                        pulse_num = stim_grouped_j.PulseNumber;
-                        pulse_frequency = stim_grouped_j.Frequency;
-                        pulse_width = stim_grouped_j.PulseWidth_ms;
-                        for k = 1:pulse_num
-                            x1 = 1000/pulse_frequency*(k-1); %compute the pulse onset in ms
-                            x2 = x1+pulse_width;
-                            y1 = 0;
-                            y2 = max(rasterY)+1;
-                            ylim([y1 y2])
-                            hold on
-                            fill([x1 x1 x2 x2]/1000,[y1 y2 y2 y1],'cyan','FaceAlpha',.3)
-                        end
-                        xLimit1 = get(gca,"XLim");
-                        subplot 212
-                        plot(bins_base,fr_base)
-                        hold on
-                        plot(bins_base0,fr_base0)
-
-                        xLimit2 = get(gca,"XLim");
-                        xlim_min = min([xLimit1 xLimit2]);
-                        xlim_max = max([xLimit1 xLimit2]);
-                        subplot 211
-                        xlim([xlim_min xlim_max])
-                        subplot 212
-                        xlim([xlim_min xlim_max])
-                        if saveplot
-                            cd('C:\Users\yycxx\OneDrive - OIST\Ephys_Code\Test_Figure')
-                            saveas(gcf,strcat(datestr(datetime("now"),30),'.jpg'))
-                            close all
-                        end
+                        fill([x1 x1 x2 x2]/1000,[y1 y2 y2 y1],'cyan','FaceAlpha',.3)
                     end
-                else
-                    light_evoked_group(j) = 0;
+                    xLimit1 = get(gca,"XLim");
+                    subplot 212
+                    plot(bins_base,fr_base)
+                    hold on
+                    plot(bins_base0,fr_base0)
+                    if saveplot
+                        cd('C:\Users\yycxx\OneDrive - OIST\Ephys_Code\Test_Figure')
+                        saveas(gcf,strcat(datestr(datetime("now"),30),'.jpg'))
+                        close
+                    end
+                    xLimit2 = get(gca,"XLim");
+                    xlim_min = min([xLimit1 xLimit2]);
+                    xlim_max = max([xLimit1 xLimit2]);
+                    subplot 211
+                    xlim([xlim_min xlim_max])
+                    subplot 212
+                    xlim([xlim_min xlim_max])
                 end
 
             else

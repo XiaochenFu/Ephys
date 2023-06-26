@@ -30,13 +30,23 @@ spikeTimes = spikeTimes(spikeTimes>min(eventTimes) & spikeTimes<max(eventTimes+2
 % █ █▀▄▀█ █▀█ █▀█ █▀█ ▀█▀ ▄▀█ █▄░█ ▀█▀
 % █ █░▀░█ █▀▀ █▄█ █▀▄ ░█░ █▀█ █░▀█ ░█░
 % the window will be an array of sniff durations
-[binnedArray, bins] = phase_normed_timestampsToBinned(spikeTimes, eventTimes, psthBinSize, window);
+if isempty(spikeTimes)
+    psth = [];
+    bins = [];
+    rasterX = [];
+    rasterY = [];
+    spikeCounts = [];
+    binnedArray = [];
+else
+    [binnedArray, bins] = phase_normed_timestampsToBinned(spikeTimes, eventTimes, psthBinSize, window);
+    spikeCounts = sum(binnedArray,2);
+    psth = mean(binnedArray./psthBinSize); % normalize to Hz
 
-spikeCounts = sum(binnedArray,2);
-psth = mean(binnedArray./psthBinSize); % normalize to Hz
+    [tr,b] = find(binnedArray);
+    [rasterX,yy] = rasterize(bins(b));
+    rasterY = yy+reshape(repmat(tr',3,1),1,length(tr)*3); % yy is of the form [0 1 NaN 0 1 NaN...] so just need to add trial number to everything
 
-[tr,b] = find(binnedArray);
-[rasterX,yy] = rasterize(bins(b));
-rasterY = yy+reshape(repmat(tr',3,1),1,length(tr)*3); % yy is of the form [0 1 NaN 0 1 NaN...] so just need to add trial number to everything
+end
+
 
 end
