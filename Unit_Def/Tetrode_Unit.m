@@ -21,7 +21,7 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
         Baseline_ms
         Baseling_Phase_Uniform
         Baseling_Phase_Wrap
-        Resultant_Vector_Uniform
+        Resultant_Vector_Uniform % resultant vector, [r_phy;r_r], normalized
         Resultant_Vector_Wrap
 
         Sniff_Locked = nan;
@@ -45,7 +45,6 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
             addpath 'C:\Users\yycxx\OneDrive - OIST\Ephys_Code\Common_Functions'
             %             tet_unit.Unit_Name_Long = sprintf('%s_Tract%d_Depth%d_%s_unit%d',obj.Mouse_ID,obj.Tract,Recording_Depth,Stimuli_Type,j_cid);
         end
-
         function [bins_base, fr_base] = baseline_sniff_ms(obj,varargin) % calculate the baseline sniff coupling in ms
             if length(varargin)>1
                 error("check")
@@ -60,7 +59,7 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
             binSize = getOr(option, 'binSize', 0.01*(calcWindow(2)-calcWindow(1)));
             isplot = getOr(option, 'isplot', 0);
             saveplot = getOr(option, 'saveplot', 0);
-            baseline_sniff_onset = obj.Spontaneous_SniffOnset;
+            baseline_sniff_onset = getOr(option, 'baseline_sniff_onset', obj.Spontaneous_SniffOnset);
             spiketime = obj.st;
 
             [psth_base, bins_base, rasterX_SP, rasterY_SP, spikeCounts_SP, ba_SP] = psthAndBA(spiketime, baseline_sniff_onset, calcWindow, binSize);
@@ -78,6 +77,8 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
                     saveas(gcf,sprintf("%s_%s_%s_ms.jpg",obj.Mouse_ID,obj.Intan_File,obj.Cannula_Position))
 
                 end
+                figure
+                plot(rasterX_SP,rasterY_SP,'.')
             end
         end
         function [bins_base, fr_base] = get_baseline_sniff_phase_uniform(obj,varargin) % calculate the baseline sniff coupling in phase
@@ -92,7 +93,7 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
             isplot = getOr(option, 'isplot', 0);
             saveplot = getOr(option, 'saveplot', 0);
             update = getOr(option, 'update', 1);
-            baseline_sniff_onset = obj.Spontaneous_SniffOnset;
+            baseline_sniff_onset = getOr(option, 'baseline_sniff_onset', obj.Spontaneous_SniffOnset);
             spiketime = obj.st;
             plotWindow_phase = getOr(option, 'plotWindow_phase', [0, 2*pi]);
             if ~update
@@ -101,7 +102,7 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
             else
                 [bins_base, fr_base] = baseline_sniff_phase_uniform(baseline_sniff_onset,spiketime,varargin);
                 % calculate the resultant vector
-                resultant_vector = calculate_resultant_vector_norm(bins_base,fr_base);
+                resultant_vector = calculate_resultant_vector_norm(bins_base,fr_base,option);%[r_phy;r_r];
                 obj.Resultant_Vector_Uniform = resultant_vector;
             end
             obj = obj.update("Baseling_Phase_Uniform",bins_base,fr_base);
@@ -112,7 +113,7 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
                 cluster_id = obj.cid;
                 title(sprintf("Baseline Sniff Coupling of Unit%d",cluster_id))
                 xlabel("Phase in sniff cycle")
-                ylabel(["Firing Rate (spike/cycle)",sprintf("bin = %3g*2pi",binSize/2/pi)])
+                ylabel(["Firing Rate (spike/cycle)"])%,sprintf("bin = %3g*2pi",binSize/2/pi)])
                 set(gca,'XTick',0:pi/2:2*pi)
                 set(gca,'XTickLabel', {'0','\pi/2','\pi','3\pi/2','2\pi'});
                 if saveplot
@@ -150,7 +151,7 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
             else
                 option = [];
             end
-            update = getOr(option, 'update', 0);
+            update = getOr(option, 'update', 1);
 
             if ~update
                 neurontype = obj.Unit_Identity; % return the existing value is no need to update
@@ -168,9 +169,72 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
                     obj.Unit_Identity = neurontype;
                 else % neurontype "o" if the unit is not MTC.
                     obj.Unit_Identity = "o";
+                    neurontype = "o";
                 end
             end
 
+        end
+        function h = plot_traces_overlay(obj,tetrode,varargin)
+            if length(varargin)>1
+                error("check")
+            end
+            if ~isempty(varargin)
+                option = varargin{1}; % parameters supplied by user
+            else
+                option = [];
+            end
+            fs = getOr(option, 'fs', 20000);
+            fslow = getOr(option, 'fslow', 3000);
+            fshigh = getOr(option, 'fshigh', 300);
+            window = getOr(option, 'window', [-0.001 0.002]);
+            fhandle = getOr(option, 'fhandle', 233);
+            Colours
+            n_channel = size(tetrode,1);
+            t = (1:size(tetrode,2))/fs;
+            eventTimes1 = obj.st;
+            % randomly poll 100 traces so it will not take forever to plot
+            rng(233)
+            if length(eventTimes1)>100
+                eventTimes_index = randperm(length(eventTimes1),100);
+                eventTimes = eventTimes1(eventTimes_index);
+            else
+                eventTimes = eventTimes1;
+            end
+            yLimit_all = [];
+             for Channel_num = 1:n_channel
+                channel = tetrode(Channel_num,:);
+                [b1, a1] = butter(3, [fshigh/fs,fslow/fs]*2, 'bandpass'); % butterworth filter with only 3 nodes (otherwise it's unstable for float32)
+                channel_filtered = filtfilt(b1,a1,channel);
+                h = figure(fhandle);
+                subplot(n_channel/4,4, Channel_num)
+                %     fff.WindowState = 'maximized';
+                %     set(fff, 'Visible', 'off');
+                [x1_all,~] = segment_with_onset_time(channel_filtered', t,  eventTimes, window);
+                x1 = mean(x1_all,2);
+                x1_std = std(x1_all,0,2);
+                itv = 1/fs;
+                tshow = 1000*(((1:length(x1))-1)*itv+window(1));% convert to ms
+                %             plot_mean_std(tshow, x1, x1_std, c_Black);
+                pl = plot(x1_all, 'Color',[c_Black 0.05]);
+%                 pl.Color(4) = 0.25;
+               
+                %             ylabel("Avg Voltage(mV)")
+                %             xlabel('Time from peak(ms)')
+                box off
+                axis off
+                %             axis equal
+                %             title(['unit ',num2str(j_cid)])
+                eval(sprintf('yLimit%d = get(gca,"YLim");',Channel_num))
+                eval(sprintf('yLimit_all = [yLimit_all yLimit%d];',Channel_num))
+                hold on
+            end
+            ylim_min = min([yLimit_all]);
+            ylim_max = max([yLimit_all]);
+            for Channel_num = 1:n_channel
+                h = figure(fhandle);
+                subplot(n_channel/4,4, Channel_num)
+                ylim([ylim_min ylim_max])
+            end
         end
         function obj = update(obj,ppt ,varargin) % update the property of a unit
             p = length(varargin);
@@ -187,7 +251,6 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
             %   Detailed explanation goes here
             obj.Property1 = inputArg1 + inputArg2;
         end
-
         function outputArg = method1(obj,inputArg)
             %METHOD1 Summary of this method goes here
             %   Detailed explanation goes here

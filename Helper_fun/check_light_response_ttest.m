@@ -34,6 +34,8 @@ for j = 1:length(stim_grouped)
     plotevoked = getOr(option, 'plotevoked', 0);
     saveplot = getOr(option, 'saveplot', 0);
     spk_threshold = getOr(option,'spk_threshold',4);
+    plotpath = getOr(option, 'plotpath', 'C:\Users\yycxx\OneDrive - OIST\Ephys_Code\Test_Figure');
+    saveformat = getOr(option,'saveformat','1');
     %% when light present
     [psth_base, bins_base, ~, ~, ~, ~] = psthAndBA(spiketime, eventtime, calcWindow, binSize);
     psth_base = psth_base*binSize;
@@ -99,7 +101,35 @@ for j = 1:length(stim_grouped)
                         subplot 212
                         xlim([xlim_min xlim_max])
                         if saveplot
-                            cd('C:\Users\yycxx\OneDrive - OIST\Ephys_Code\Test_Figure')
+                            cd(plotpath)
+
+                            f = num2str(saveformat);
+                            for j = 1:length(f)
+                                filename = strcat(datestr(datetime("now"),30));
+                                switch j
+                                    case 1
+                                        if strcmp(f(end-j+1),'1')
+                                            extension = '.jpg';
+                                            %                                             filename = sprintf ('%s_%s.%s',experiment,title,extension);
+                                            %                                             saveas(figurehandle,fullfile(Path,filename))
+                                            saveas(gcf,strcat(filename,extension))
+                                        end
+                                    case 2
+                                        if strcmp(f(end-j+1),'1')
+                                            extension = '.fig';
+                                            %                                             filename = sprintf ('%s_%s.%s',experiment,title,extension);
+                                            saveas(gcf,strcat(filename,extension))
+                                            %                                             saveas(figurehandle,fullfile(Path,filename))
+                                        end
+                                    case 3
+                                        if strcmp(f(end-j+1),'1')
+                                            extension = '.svg';
+                                            %                                             filename = sprintf ('%s_%s.%s',experiment,title,extension);
+                                            saveas(gcf,strcat(filename,extension))
+                                        end
+
+                                end
+                            end
                             saveas(gcf,strcat(datestr(datetime("now"),30),'.jpg'))
                             close all
                         end

@@ -9,9 +9,13 @@ classdef Tet_Light_Unit < Tetrode_Unit
         Light_Evoked = []; % binary value, 1 if the unit show any excitatory
         % respnse to at least one odour By default, the odour need to be
         % presented for more than once
+        Current_to_Power % 
     end
     methods
         function light_response = get_light_response(obj, stim_grouped, sniffonsets,varargin)
+            if length(varargin)>1
+                error("check")
+            end
             if ~isempty(varargin)
                 option = varargin{1}; % parameters supplied by user
             else
@@ -19,7 +23,23 @@ classdef Tet_Light_Unit < Tetrode_Unit
             end
             spiketime = obj.st;
             sniff_spon = obj.Spontaneous_SniffOnset;
-            light_response = check_light_response(spiketime,stim_grouped,sniffonsets,option);
+            % first check with ttest if there's any differences from
+            % baseline then confirm
+%             option.fr_threhold = 100;
+            light_response = check_light_response_ttest(spiketime,stim_grouped,sniffonsets,option);
+            %             light_different = check_light_response_zscore(spiketime,stim_grouped,sniffonsets,option);
+            %
+%             if light_different
+%                 [evoked_spk,~,~,~] = light_evoked_spikes(spiketime,stim_grouped,option);
+%                 if length(evoked_spk)>2
+%                     light_response = 1;
+%                 else
+%                     light_response = 0;
+%                 end
+%             else
+%                 light_response = 0;
+%             end
+            
             obj.update("Light_Response",light_response,stim_grouped);
             obj.is_light_evoked;
             %             obj.Light_Evoked = light_evoked;
@@ -41,11 +61,21 @@ classdef Tet_Light_Unit < Tetrode_Unit
                     end
                 end
                 obj.Light_Evoked = light_evoked;
-%             else
-%                 light_evoked = obj.Light_Evoked;
-%             end
         end
-
+        function obj = AddIntensity_Stimuli_Grouped(obj)
+            StimuliGrouped = obj.Stimuli_Grouped;
+            if isfield(StimuliGrouped,'Power')
+                error('why the power is there')
+            else
+                Current2Power = obj.Current_to_Power;
+                for stm = 1:length(StimuliGrouped)
+                    DrivingCurrent = StimuliGrouped(stm).DrivingCurrent;
+                    Intensity = DrivingCurrent_2_Intensity(DrivingCurrent, Current2Power);
+                    StimuliGrouped(stm).Intensity = Intensity;
+                end
+                obj.Stimuli_Grouped = StimuliGrouped;
+            end
+        end
 
 
 
