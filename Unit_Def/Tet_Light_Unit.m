@@ -1,7 +1,7 @@
 classdef Tet_Light_Unit < Tetrode_Unit
     properties %
         Stimuli_Info % stimuli, unsorted
-        Stimuli_Grouped % a sructure of odour stimuli. 
+        Stimuli_Grouped % a sructure of odour stimuli.
         Light_Response % a structure with grouped stimuli and response.
         % -1 for inhibitatory response, 0 for not responding and 1 for
         % excitatory response. By default, the odour need to be presented
@@ -9,59 +9,54 @@ classdef Tet_Light_Unit < Tetrode_Unit
         Light_Evoked = []; % binary value, 1 if the unit show any excitatory
         % respnse to at least one odour By default, the odour need to be
         % presented for more than once
-        Current_to_Power % 
+        Current_to_Power %
     end
     methods
-        function light_response = get_light_response(obj, stim_grouped, sniffonsets,varargin)
+        % Method to get light response
+        function light_response = get_light_response(obj, stim_grouped, sniffonsets, varargin)
+            % Handle error for too many inputs
             if length(varargin)>1
-                error("check")
+                error("Too many inputs. Please check.")
             end
+
+            % Check for optional parameters
             if ~isempty(varargin)
-                option = varargin{1}; % parameters supplied by user
+                option = varargin{1}; % Parameters supplied by user
             else
                 option = [];
             end
+
+            % Obtain spike times and spontaneous sniff onset
             spiketime = obj.st;
             sniff_spon = obj.Spontaneous_SniffOnset;
-            % first check with ttest if there's any differences from
-            % baseline then confirm
-%             option.fr_threhold = 100;
-            light_response = check_light_response_ttest(spiketime,stim_grouped,sniffonsets,option);
-            %             light_different = check_light_response_zscore(spiketime,stim_grouped,sniffonsets,option);
-            %
-%             if light_different
-%                 [evoked_spk,~,~,~] = light_evoked_spikes(spiketime,stim_grouped,option);
-%                 if length(evoked_spk)>2
-%                     light_response = 1;
-%                 else
-%                     light_response = 0;
-%                 end
-%             else
-%                 light_response = 0;
-%             end
-            
-            obj.update("Light_Response",light_response,stim_grouped);
+
+            % Check light response using dedicated function
+            light_response = check_light_response_ttest(spiketime, stim_grouped, sniffonsets, option);
+
+            % Update object properties
+            obj.update("Light_Response", light_response, stim_grouped);
+
+            % Check if the light response is evoked
             obj.is_light_evoked;
-            %             obj.Light_Evoked = light_evoked;
-            %             if light_evoked
-            %                 obj.Unit_Name_Long
-            %             end
         end
+
+        % Method to check if light is evoked
         function light_evoked = is_light_evoked(obj)
-            % calculated and update Light_Evoked
-%             if isempty(obj.Light_Evoked)
-                if isempty( obj.Light_Response{1})
-                    fprintf("please calculate with get_light_response")
+            if isempty(obj.Light_Response{1})
+                fprintf("Please calculate with get_light_response")
+            else
+                light_response = obj.Light_Response{1};
+                if any(light_response)
+                    light_evoked = 1;
                 else
-                    light_response = obj.Light_Response{1};
-                    if any(light_response)
-                        light_evoked = 1;
-                    else
-                        light_evoked = 0;
-                    end
+                    light_evoked = 0;
                 end
-                obj.Light_Evoked = light_evoked;
+            end
+
+            % Update object property
+            obj.Light_Evoked = light_evoked;
         end
+        
         function obj = AddIntensity_Stimuli_Grouped(obj)
             StimuliGrouped = obj.Stimuli_Grouped;
             if isfield(StimuliGrouped,'Power')
