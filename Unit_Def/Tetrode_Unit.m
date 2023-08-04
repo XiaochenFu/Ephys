@@ -14,10 +14,16 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
         Distance_to_L1 % distance to layer1 piriform, um
 
         st %Spike_Time
-        Unit_Quality
+        Unit_Quality % after sorting by phy
         Unit_Identity
         cid % unit id in Phy
 
+        % unit quality from kilosort2, including cluster_id	Amplitude
+        % ContamPct KSLabel	amp	ch	depth	fr	group	n_spikes sh. saved
+        % in file cluster_info.tsv
+        KS_info
+    
+        
         Baseline_ms
         Baseling_Phase_Uniform
         Baseling_Phase_Wrap
@@ -31,6 +37,7 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
         Spike_File
         Intan_Clip
         Spontaneous_SniffOnset = [];
+        SniffOnset = []; % all the sniff onset.
     end
 
     methods
