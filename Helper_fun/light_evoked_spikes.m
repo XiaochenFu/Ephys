@@ -28,7 +28,7 @@ jitter_window = getOr(option,'jitter_window',1);
 stimuli_colour = getOr(option,'stimuli_colour','cyan');
 count_before_light = getOr(option,'count_before_light',0);
 latency_est = getOr(option,'latency_est',2/1000);
-fist_spk_only = getOr(option,'fist_spk_only',1);
+one_spk_only = getOr(option,'one_spk_only',1);
 eventtime = stim_grouped_j.TrailOnset;
 % trial_latency = stim_grouped_j.LatencyFromCalculatedSniffOnset_ms;
 % calculate window will be automatically decided based on the last
@@ -95,15 +95,38 @@ for lo = 1:length(light_onsets)
                 closest_peak_window(2) = light_onset_oneafter;
             end
         end
+        % filter those spike that might fall into the window
         spk_idx = rasterX>closest_peak_window(1) & rasterX<closest_peak_window(2);
-        if fist_spk_only
-            spk_idx = spk_idx(1);
+        rasterX0 = rasterX(spk_idx);
+        rasterY0 = rasterY(spk_idx);
+        % by default, get one or zero evoked spike with one light pulse (to calculate the spike probability) 
+        if one_spk_only
+            uniqueRasterY = unique(rasterY0);
+
+            closestXValues = NaN(size(uniqueRasterY));  % Initialize a result array
+
+            for idx = 1:length(uniqueRasterY)
+                currentY = uniqueRasterY(idx);
+
+                % Get all the rasterX values corresponding to the current rasterY value
+                correspondingX = rasterX0(rasterY0 == currentY);
+
+                % Find the rasterX value closest to closest_peak_time
+                [~, minIdx] = min(abs(correspondingX - closest_peak_time));
+                closestXValues(idx) = correspondingX(minIdx);
+            end
+
+            % Now, closestXValues will hold the rasterX values closest to closest_peak_time for each unique rasterY value.
+            rasterX0 = closestXValues;
+            rasterY0 = uniqueRasterY;
+        else
+
         end
         if isplot
 
-            pl2 = plot(rasterX(spk_idx), rasterY(spk_idx),'ro');
+            pl2 = plot(rasterX0, rasterY0,'ro');
         end
-        evoked_spk_lo = rasterX(spk_idx);
+        evoked_spk_lo = rasterX0;
         spk_latency_lo_ms = (mean(evoked_spk_lo)-light_onset)*1000;
         jitter_lo_ms = std(evoked_spk_lo)*1000;
         prob_spk_lo = length(evoked_spk_lo)/length(eventtime);
