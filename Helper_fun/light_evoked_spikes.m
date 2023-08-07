@@ -28,8 +28,9 @@ jitter_window = getOr(option,'jitter_window',1);
 stimuli_colour = getOr(option,'stimuli_colour','cyan');
 count_before_light = getOr(option,'count_before_light',0);
 latency_est = getOr(option,'latency_est',2/1000);
+fist_spk_only = getOr(option,'fist_spk_only',1);
 eventtime = stim_grouped_j.TrailOnset;
-trial_latency = stim_grouped_j.LatencyFromCalculatedSniffOnset_ms;
+% trial_latency = stim_grouped_j.LatencyFromCalculatedSniffOnset_ms;
 % calculate window will be automatically decided based on the last
 % pulse.since the latency might change with the light intensity etc.,
 % but less than 20ms, I'll use 20 ms after the last pulse
@@ -95,6 +96,9 @@ for lo = 1:length(light_onsets)
             end
         end
         spk_idx = rasterX>closest_peak_window(1) & rasterX<closest_peak_window(2);
+        if fist_spk_only
+            spk_idx = spk_idx(1);
+        end
         if isplot
 
             pl2 = plot(rasterX(spk_idx), rasterY(spk_idx),'ro');
