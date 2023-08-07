@@ -13,7 +13,7 @@ classdef Tet_Light_Unit < Tetrode_Unit
     end
     methods
         % Method to get light response
-        function light_response = get_light_response(obj, stim_grouped, sniffonsets, varargin)
+        function light_response = get_light_response(obj, stim_grouped, varargin) % old version: light_response = get_light_response(obj, stim_grouped, sniffonsets, varargin)
             % Handle error for too many inputs
             if length(varargin)>1
                 error("Too many inputs. Please check.")
@@ -28,7 +28,8 @@ classdef Tet_Light_Unit < Tetrode_Unit
 
             % Obtain spike times and spontaneous sniff onset
             spiketime = obj.st;
-            sniff_spon = obj.Spontaneous_SniffOnset;
+            %             sniff_spon = obj.Spontaneous_SniffOnset;
+            sniffonsets = obj.SniffOnset;
 
             % Check light response using dedicated function
             light_response = check_light_response_ttest(spiketime, stim_grouped, sniffonsets, option);
