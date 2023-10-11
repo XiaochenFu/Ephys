@@ -1,6 +1,67 @@
 function [evoked_spk,spk_latency_ms,jitter_ms,prob_spk] = light_evoked_spikes(spiketime,stim_grouped_j, varargin)
+% find the antidromic spikes that follow the light pulses. Calculate the
+% PSTH of the unit. For each pulse, find the first peak of the PSTH after
+% that, which is likely to be light evoked. Then, find the corresponding
+% spikes that belongs to the PSTH peak. 
+
+
+% INPUT
+%   spiketime: spike time of the unit. In second
+%       
+%   stim_grouped_j: a tructure about the light pulses. Should be with
+%       the field of DrivingCurrent(mA), Frequency(Hz), PulseWidth_ms(ms),
+%       PulseNumber(int), TrailOnset (s,1xn array), 
+%       LatencyFromCalculatedSniffOnset_ms (ms,1xn array), 
+%       PhaseFromCalculatedSniffOnset (rad,1xn array)
+%
+%   option: 
+%       calcWindow:  time window (s) from the pulse OFFSET that we check. 
+%           something like [0 0.02]. If the calcWindow is not defined, 
+%           calcWindow is [0 calcWindow_latency]
+
+%       calcWindow_latency: by default 0.02
+
+%       binSize: time bin used to calculate the PSTH. default is 1% of the 
+%           calcWindow width.
+
+%       fr_threhold: threshold for PSTH peak. default 50Hz.
+
+%       jitter_window: the range of time we use to look for the 'spikes 
+%           belongs to the PSTH peak'
+        
+%       count_before_light: when finding the spikes contributing the PSTH 
+%           peak, take the spikes happen before the current light onset into 
+%           accrount. default 0
+
+%       latency_est: ?????
+
+%       one_spk_only: ignore the 2nd and the 3rd spikes evoked by the light
+%           pusle. default 1.
+
+%       isplot: show plot or not. default 0
+
+%       stimuli_colour: default color for ploting the light pulse. default cyan.
+
+%       saveplot: save figure or not. defacult 0. 
+
+
+% OUTPUT
+%   evoked_spk: Cell array containing spike times considered light-evoked
+%       for each pulse. Each cell corresponds to a pulse.
+
+%   spk_latency_ms: Cell array holding average latency of evoked spikes for
+%       each pulse in milliseconds.
+
+%   jitter_ms: Cell array containing jitter (standard deviation of latency)
+%       of evoked spikes for each pulse in milliseconds.
+
+%   prob_spk: Cell array holding the probability of observing an evoked
+%       spike per pulse. Calculated as number of evoked spikes divided by 
+%       total number of trials (light pulses).
+
+%       
 if length(varargin)>1
-    error("check")
+    error("check the input number")
 end
 if ~isempty(varargin)
     option = varargin{1}; % parameters supplied by user
@@ -8,8 +69,8 @@ else
     option = [];
 end
 calcWindow = getOr(option, 'calcWindow', []);
-if isempty(calcWindow)
-    calcWindow_latency = getOr(option, 'calcWindow_latency', 0.020);
+if isempty(calcWindow) % the time window after the pulse that we used to check the spikes
+    calcWindow_latency = getOr(option, 'calcWindow_latency', 0.020); % by default, we only check the spikes happen within 20ms after the light pulse
     pulse_num = stim_grouped_j.PulseNumber;
     pulse_frequency = stim_grouped_j.Frequency;
     pulse_width = stim_grouped_j.PulseWidth_ms;
@@ -21,20 +82,19 @@ else
 
 end
 binSize = getOr(option, 'binSize', 0.01*(calcWindow(2)-calcWindow(1)));
-isplot = getOr(option, 'isplot', 0);
-saveplot = getOr(option, 'saveplot', 0);
 fr_threhold =getOr(option, 'fr_threhold', 50);
 jitter_window = getOr(option,'jitter_window',1);
-stimuli_colour = getOr(option,'stimuli_colour','cyan');
 count_before_light = getOr(option,'count_before_light',0);
 latency_est = getOr(option,'latency_est',2/1000);
+% seting for ploting. 
+isplot = getOr(option, 'isplot', 0);
+stimuli_colour = getOr(option,'stimuli_colour','cyan');
+saveplot = getOr(option, 'saveplot', 0);
+
+
+
 one_spk_only = getOr(option,'one_spk_only',1);
-eventtime = stim_grouped_j.TrailOnset;
-% trial_latency = stim_grouped_j.LatencyFromCalculatedSniffOnset_ms;
-% calculate window will be automatically decided based on the last
-% pulse.since the latency might change with the light intensity etc.,
-% but less than 20ms, I'll use 20 ms after the last pulse
-%     calcWindow = getOr(option, 'calcWindow', [0, 0.1]);
+eventtime = stim_grouped_j.TrailOnset; % onset of the each trial (the onset of the first pulse in the pulse train)
 
 
 
@@ -58,27 +118,27 @@ end
 [pks,locs] = findpeaks(fr_base,bins_base,'MinPeakHeight',fr_threhold); % seems to work for now
 light_onsets = get_stimuli_onsets_s(stim_grouped_j);
 [binnedArray, bins] = timestampsToBinned(spiketime, eventtime, binSize, calcWindow);
-% lick raster for only s plus trials
 [tr,b] = find(binnedArray);
 [rasterX,yy] = rasterize(bins(b));
-rasterY = yy+reshape([zeros(size(tr'));tr';zeros(size(tr'))],1,length(tr)*3); % note from XFu. The original code duplicate the dots to make the ticks longer, which I believe is cheating.
+rasterY = yy+reshape([zeros(size(tr'));tr';zeros(size(tr'))],1,length(tr)*3);
 rasterX(rasterY==0) = [];rasterY(rasterY==0) = [];% remove zeros
 if isplot
     figure
     pl1 = plot(rasterX, rasterY,'.'); hold on
 end
-%                   !  scatter(rasterX, rasterY,15,1:length(rasterY)) % sanity check. No duplicated dots
+
 %     find the fist peak after the onset for the light evoked stimuli
-for lo = 1:length(light_onsets)
+for lo = 1:length(light_onsets) % loop for each pulse of the pulse train
     light_onset = light_onsets(lo);
     firstpeakafter_t = @(locs,t) min(locs(locs>t)-t)+t;
-%     secondpeakafter_t = @(locs,t) min(locs(locs>firstpeakafter_t(t))-firstpeakafter_t(t))+firstpeakafter_t(t);
-    %     firstpeakafter_t = @(locs,t) find(locs==interp1(locs,locs,t,'next'),1);
     closest_peak_time = firstpeakafter_t(locs,light_onset+latency_est); %
-%     close_peak_time = secondpeakafter_t(locs,light_onset); %
-%     if secondpeakafter_t<(20/1000)
-%         higest_peak_time
-%     end
+    evoked_spk_lo = nan(size(eventtime));
+    spk_latency_lo_ms = nan;
+    jitter_lo_ms = nan;
+    prob_spk_lo = 0;
+
+
+
     if (closest_peak_time-light_onset)<(20/1000)
         check_window = jitter_window*[-1 1]/1000;
         closest_peak_window = closest_peak_time+check_window;
@@ -99,42 +159,68 @@ for lo = 1:length(light_onsets)
         spk_idx = rasterX>closest_peak_window(1) & rasterX<closest_peak_window(2);
         rasterX0 = rasterX(spk_idx);
         rasterY0 = rasterY(spk_idx);
-        % by default, get one or zero evoked spike with one light pulse (to calculate the spike probability) 
+        % by default, get one or zero evoked spike with one light pulse (to calculate the spike probability)
         if one_spk_only
-            uniqueRasterY = unique(rasterY0);
+            %%
+            closestXValues = NaN(size(eventtime));  % Initialize a result array
+            uniqueRasterY = NaN(size(eventtime));  % Initialize a result array
 
-            closestXValues = NaN(size(uniqueRasterY));  % Initialize a result array
+            for idx = 1:size(eventtime,2)
 
-            for idx = 1:length(uniqueRasterY)
-                currentY = uniqueRasterY(idx);
+                currentY = idx;
 
                 % Get all the rasterX values corresponding to the current rasterY value
                 correspondingX = rasterX0(rasterY0 == currentY);
-
-                % Find the rasterX value closest to closest_peak_time
-                [~, minIdx] = min(abs(correspondingX - closest_peak_time));
-                closestXValues(idx) = correspondingX(minIdx);
+                if ~isempty(correspondingX)
+                    % Find the rasterX value closest to closest_peak_time
+                    [~, minIdx] = min(abs(correspondingX - closest_peak_time));
+                    closestXValues(idx) = correspondingX(minIdx);
+                    uniqueRasterY(idx) = currentY;
+                end
             end
-
             % Now, closestXValues will hold the rasterX values closest to closest_peak_time for each unique rasterY value.
             rasterX0 = closestXValues;
             rasterY0 = uniqueRasterY;
+            %%
+%                                     uniqueRasterY = unique(rasterY0);
+%             
+%                         closestXValues = NaN(size(uniqueRasterY));  % Initialize a result array
+%                         for idx = 1:length(uniqueRasterY)
+%             
+%                             currentY = uniqueRasterY(idx);
+%             
+%                             % Get all the rasterX values corresponding to the current rasterY value
+%                             correspondingX = rasterX0(rasterY0 == currentY);
+%             
+%                             % Find the rasterX value closest to closest_peak_time
+%                             [~, minIdx] = min(abs(correspondingX - closest_peak_time));
+%                             closestXValues(idx) = correspondingX(minIdx);
+%                         end
+% 
+% %             Now, closestXValues will hold the rasterX values closest to closest_peak_time for each unique rasterY value.
+%                         rasterX0 = closestXValues;
+%                         rasterY0 = uniqueRasterY;
+            %%
         else
 
         end
         if isplot
+            %             plot(rasterX0, rasterY0,'ro');
+            nonNanIdx = ~isnan(rasterX0) & ~isnan(rasterY0); % Get indices where neither of the arrays is NaN
+            filtered_rasterX0 = rasterX0(nonNanIdx); % Filter NaN values from rasterX0
+            filtered_rasterY0 = rasterY0(nonNanIdx); % Filter NaN values from rasterY0
 
-            pl2 = plot(rasterX0, rasterY0,'ro');
+            plot(filtered_rasterX0, filtered_rasterY0, 'ro');
         end
         evoked_spk_lo = rasterX0;
-        spk_latency_lo_ms = (mean(evoked_spk_lo)-light_onset)*1000;
-        jitter_lo_ms = std(evoked_spk_lo)*1000;
-        prob_spk_lo = length(evoked_spk_lo)/length(eventtime);
-    else
-        evoked_spk_lo = nan;
-        spk_latency_lo_ms = nan;
-        jitter_lo_ms = nan;
-        prob_spk_lo = 0;
+        spk_latency_lo_ms = (mean(evoked_spk_lo,"omitnan")-light_onset)*1000;
+        jitter_lo_ms = std(evoked_spk_lo,"omitnan")*1000;
+        prob_spk_lo = sum(~isnan(evoked_spk_lo))/length(eventtime);
+%     else
+%         evoked_spk_lo = nan;
+%         spk_latency_lo_ms = nan;
+%         jitter_lo_ms = nan;
+%         prob_spk_lo = 0;
     end
     evoked_spk{lo} = evoked_spk_lo;
     spk_latency_ms{lo} = spk_latency_lo_ms;
@@ -147,6 +233,6 @@ if isplot
     xlim([min(bins_base) max(bins_base)])
     xlabel('Time from trail onset (s)')
     ylabel ('Trial number')
-    legend([pl1 pl2], {"Spikes","Light evoked Spikes"},'Location','southoutside')
+%     legend([pl1 pl2], {"Spikes","Light evoked Spikes"},'Location','southoutside')
     title('Light evoked spikes')
 end
