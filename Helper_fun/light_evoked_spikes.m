@@ -15,6 +15,8 @@ function [evoked_spk,spk_latency_ms,jitter_ms,prob_spk] = light_evoked_spikes(sp
 %       PhaseFromCalculatedSniffOnset (rad,1xn array)
 %
 %   option: 
+%       fs: sampleing rate. default 20000.
+
 %       calcWindow:  time window (s) from the pulse OFFSET that we check. 
 %           something like [0 0.02]. If the calcWindow is not defined, 
 %           calcWindow is [0 calcWindow_latency]
@@ -68,6 +70,7 @@ if ~isempty(varargin)
 else
     option = [];
 end
+fs = getOr(option, 'fs', 20000);
 calcWindow = getOr(option, 'calcWindow', []);
 if isempty(calcWindow) % the time window after the pulse that we used to check the spikes
     calcWindow_latency = getOr(option, 'calcWindow_latency', 0.020); % by default, we only check the spikes happen within 20ms after the light pulse
@@ -81,7 +84,7 @@ if isempty(calcWindow) % the time window after the pulse that we used to check t
 else
 
 end
-binSize = getOr(option, 'binSize', 0.01*(calcWindow(2)-calcWindow(1)));
+binSize = getOr(option, 'binSize', 0.01*(calcWindow(2)-calcWindow(1))); %getOr(option, 'binSize', 1/20000);
 fr_threhold =getOr(option, 'fr_threhold', 50);
 jitter_window = getOr(option,'jitter_window',1);
 count_before_light = getOr(option,'count_before_light',0);
@@ -117,17 +120,32 @@ end
 
 [pks,locs] = findpeaks(fr_base,bins_base,'MinPeakHeight',fr_threhold); % seems to work for now
 light_onsets = get_stimuli_onsets_s(stim_grouped_j);
-[binnedArray, bins] = timestampsToBinned(spiketime, eventtime, binSize, calcWindow);
+%% this is the raster to find the light evoked spikes, binned so not accurate
+% [binnedArray, bins] = timestampsToBinned(spiketime, eventtime, binSize, calcWindow);
+% [tr,b] = find(binnedArray);
+% [rasterX,yy] = rasterize(bins(b) - 0.5*binSize);
+% % rasterY = yy+reshape([zeros(size(tr'));tr';zeros(size(tr'))],1,length(tr)*3);
+% % rasterX(rasterY==0) = [];
+% % rasterY(rasterY==0) = [];% remove zeros
+% rasterY = reshape([nan(size(tr'));tr';zeros(size(tr'))],1,length(tr)*3);
+% mask = ~isnan(rasterY);
+% rasterX = rasterX(mask);
+% rasterY = rasterY(mask);% Remove NaNs
+
+%% this is the raster to calculate the latency, so accurate
+[binnedArray, bins] = timestampsToBinned(spiketime, eventtime, 1/fs, calcWindow);
 [tr,b] = find(binnedArray);
-[rasterX,yy] = rasterize(bins(b));
-rasterY = yy+reshape([zeros(size(tr'));tr';zeros(size(tr'))],1,length(tr)*3);
-rasterX(rasterY==0) = [];rasterY(rasterY==0) = [];% remove zeros
+[raw_rasterX,~] = rasterize(bins(b) - 0.5*binSize);
+raw_rasterY = reshape([nan(size(tr'));tr';zeros(size(tr'))],1,length(tr)*3);
+raw_mask = ~isnan(raw_rasterY);
+rasterX = raw_rasterX(raw_mask);
+rasterY = raw_rasterY(raw_mask);% Remove NaNs
 if isplot
     figure
     pl1 = plot(rasterX, rasterY,'.'); hold on
 end
 
-%     find the fist peak after the onset for the light evoked stimuli
+%%     find the fist peak after the onset for the light evoked stimuli
 for lo = 1:length(light_onsets) % loop for each pulse of the pulse train
     light_onset = light_onsets(lo);
     firstpeakafter_t = @(locs,t) min(locs(locs>t)-t)+t;
@@ -139,7 +157,7 @@ for lo = 1:length(light_onsets) % loop for each pulse of the pulse train
 
 
 
-    if (closest_peak_time-light_onset)<(20/1000)
+    if (closest_peak_time-light_onset)<(calcWindow_latency)
         check_window = jitter_window*[-1 1]/1000;
         closest_peak_window = closest_peak_time+check_window;
         if ~count_before_light % if we only count the pulse after light onset (default)
@@ -181,26 +199,6 @@ for lo = 1:length(light_onsets) % loop for each pulse of the pulse train
             % Now, closestXValues will hold the rasterX values closest to closest_peak_time for each unique rasterY value.
             rasterX0 = closestXValues;
             rasterY0 = uniqueRasterY;
-            %%
-%                                     uniqueRasterY = unique(rasterY0);
-%             
-%                         closestXValues = NaN(size(uniqueRasterY));  % Initialize a result array
-%                         for idx = 1:length(uniqueRasterY)
-%             
-%                             currentY = uniqueRasterY(idx);
-%             
-%                             % Get all the rasterX values corresponding to the current rasterY value
-%                             correspondingX = rasterX0(rasterY0 == currentY);
-%             
-%                             % Find the rasterX value closest to closest_peak_time
-%                             [~, minIdx] = min(abs(correspondingX - closest_peak_time));
-%                             closestXValues(idx) = correspondingX(minIdx);
-%                         end
-% 
-% %             Now, closestXValues will hold the rasterX values closest to closest_peak_time for each unique rasterY value.
-%                         rasterX0 = closestXValues;
-%                         rasterY0 = uniqueRasterY;
-            %%
         else
 
         end
@@ -216,11 +214,7 @@ for lo = 1:length(light_onsets) % loop for each pulse of the pulse train
         spk_latency_lo_ms = (mean(evoked_spk_lo,"omitnan")-light_onset)*1000;
         jitter_lo_ms = std(evoked_spk_lo,"omitnan")*1000;
         prob_spk_lo = sum(~isnan(evoked_spk_lo))/length(eventtime);
-%     else
-%         evoked_spk_lo = nan;
-%         spk_latency_lo_ms = nan;
-%         jitter_lo_ms = nan;
-%         prob_spk_lo = 0;
+
     end
     evoked_spk{lo} = evoked_spk_lo;
     spk_latency_ms{lo} = spk_latency_lo_ms;
