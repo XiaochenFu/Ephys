@@ -181,68 +181,152 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
             end
 
         end
-        function h = plot_traces_overlay(obj,tetrode,varargin)
-            if length(varargin)>1
-                error("check")
-            end
-            if ~isempty(varargin)
-                option = varargin{1}; % parameters supplied by user
-            else
-                option = [];
-            end
-            fs = getOr(option, 'fs', 20000);
-            fslow = getOr(option, 'fslow', 3000);
-            fshigh = getOr(option, 'fshigh', 300);
-            window = getOr(option, 'window', [-0.001 0.002]);
-            fhandle = getOr(option, 'fhandle', 233);
-            Colours
-            n_channel = size(tetrode,1);
-            t = (1:size(tetrode,2))/fs;
-            eventTimes1 = obj.st;
-            % randomly poll 100 traces so it will not take forever to plot
-            rng(233)
-            if length(eventTimes1)>100
-                eventTimes_index = randperm(length(eventTimes1),100);
-                eventTimes = eventTimes1(eventTimes_index);
-            else
-                eventTimes = eventTimes1;
-            end
-            yLimit_all = [];
-             for Channel_num = 1:n_channel
-                channel = tetrode(Channel_num,:);
-                [b1, a1] = butter(3, [fshigh/fs,fslow/fs]*2, 'bandpass'); % butterworth filter with only 3 nodes (otherwise it's unstable for float32)
-                channel_filtered = filtfilt(b1,a1,channel);
-                h = figure(fhandle);
-                subplot(n_channel/4,4, Channel_num)
-                %     fff.WindowState = 'maximized';
-                %     set(fff, 'Visible', 'off');
-                [x1_all,~] = segment_with_onset_time(channel_filtered', t,  eventTimes, window);
-                x1 = mean(x1_all,2);
-                x1_std = std(x1_all,0,2);
-                itv = 1/fs;
-                tshow = 1000*(((1:length(x1))-1)*itv+window(1));% convert to ms
-                %             plot_mean_std(tshow, x1, x1_std, c_Black);
-                pl = plot(x1_all, 'Color',[c_Black 0.05]);
-%                 pl.Color(4) = 0.25;
-               
-                %             ylabel("Avg Voltage(mV)")
-                %             xlabel('Time from peak(ms)')
-                box off
-                axis off
-                %             axis equal
-                %             title(['unit ',num2str(j_cid)])
-                eval(sprintf('yLimit%d = get(gca,"YLim");',Channel_num))
-                eval(sprintf('yLimit_all = [yLimit_all yLimit%d];',Channel_num))
-                hold on
-            end
-            ylim_min = min([yLimit_all]);
-            ylim_max = max([yLimit_all]);
-            for Channel_num = 1:n_channel
-                h = figure(fhandle);
-                subplot(n_channel/4,4, Channel_num)
-                ylim([ylim_min ylim_max])
-            end
+
+%         function h = plot_traces_overlay(obj,tetrode,varargin)
+%             Colours
+%             if length(varargin)>1
+%                 error("check")
+%             end
+%             if ~isempty(varargin)
+%                 option = varargin{1}; % parameters supplied by user
+%             else
+%                 option = [];
+%             end
+%             fs = getOr(option, 'fs', 20000);
+%             fslow = getOr(option, 'fslow', 3000);
+%             fshigh = getOr(option, 'fshigh', 300);
+%             window = getOr(option, 'window', [-0.001 0.002]);
+%             fhandle = getOr(option, 'fhandle', 233);
+%             evtTimes = getOr(option, 'evtTimes', obj.st);
+%             trace_max_number = getOr(option, 'trace_max_number', 100); % [] for plot all 
+%             if ~isempty(trace_max_number)
+%                 if length(evtTimes)>trace_max_number
+%                     eventTimes_index = randperm(length(evtTimes),trace_max_number);
+%                     evtTimes = evtTimes(eventTimes_index);
+%                 end
+%             end         
+%             n_channel = size(tetrode,1);
+%             ch_to_plot = getOr(option, 'ch_to_plot', [1:n_channel]);        
+% 
+%             t = (1:size(tetrode,2))/fs;
+% 
+%             % randomly poll 100 traces so it will not take forever to plot
+%             rng(233)
+% 
+%             yLimit_all = [];
+%             for ch_i = 1:length(ch_to_plot)
+%                 Channel_num = ch_to_plot(ch_i);
+%                 channel = tetrode(Channel_num,:);
+%                 [b1, a1] = butter(3, [fshigh/fs,fslow/fs]*2, 'bandpass'); % butterworth filter with only 3 nodes (otherwise it's unstable for float32)
+%                 channel_filtered = filtfilt(b1,a1,channel);
+%                 h = figure(fhandle);
+%                 subplot(n_channel/4,4, Channel_num)
+%                 [x1_all,~] = segment_with_onset_time(channel_filtered', t,  evtTimes, window);
+%                 x1 = mean(x1_all,2);
+%                 x1_std = std(x1_all,0,2);
+%                 itv = 1/fs;
+%                 tshow = 1000*(((1:length(x1))-1)*itv+window(1));% convert to ms
+%                 pl = plot(x1_all, 'Color',[c_Black 0.05]);
+%                 box off
+%                 axis off
+%                 eval(sprintf('yLimit%d = get(gca,"YLim");',Channel_num))
+%                 eval(sprintf('yLimit_all = [yLimit_all yLimit%d];',Channel_num))
+%                 hold on
+%             end
+%             ylim_min = min([yLimit_all]);
+%             ylim_max = max([yLimit_all]);
+%             for Channel_num = 1:n_channel
+%                 h = figure(fhandle);
+%                 subplot(n_channel/4,4, Channel_num)
+%                 ylim([ylim_min ylim_max])
+%             end
+%         end
+
+function waveforms = calculate_waveforms(obj, tetrode, varargin)
+    if length(varargin) > 1
+        error("check")
+    end
+    if ~isempty(varargin)
+        option = varargin{1}; % parameters supplied by user
+    else
+        option = [];
+    end
+    fs = getOr(option, 'fs', 20000);
+    fslow = getOr(option, 'fslow', 3000);
+    fshigh = getOr(option, 'fshigh', 300);
+    window = getOr(option, 'window', [-0.001 0.002]);
+    evtTimes = getOr(option, 'evtTimes', obj.st);
+    trace_max_number = getOr(option, 'trace_max_number', 100); % [] for plot all
+
+    if ~isempty(trace_max_number)
+        if length(evtTimes) > trace_max_number
+            eventTimes_index = randperm(length(evtTimes), trace_max_number);
+            evtTimes = evtTimes(eventTimes_index);
         end
+    end
+
+    n_channel = size(tetrode, 1);
+    ch_to_plot = getOr(option, 'ch_to_plot', [1:n_channel]);
+    t = (1:size(tetrode, 2)) / fs;
+
+    rng(233) % Set seed for reproducibility
+
+    waveforms = cell(1, length(ch_to_plot));
+    for ch_i = 1:length(ch_to_plot)
+        Channel_num = ch_to_plot(ch_i);
+        channel = tetrode(Channel_num, :);
+        [b1, a1] = butter(3, [fshigh/fs, fslow/fs] * 2, 'bandpass');
+        channel_filtered = filtfilt(b1, a1, channel);
+        waveforms{ch_i} = segment_with_onset_time(channel_filtered', t, evtTimes, window);
+    end
+end
+function h = plot_traces_overlay(obj, tetrode, varargin)
+    waveforms = calculate_waveforms(obj, tetrode, varargin);
+
+    % Assuming the 'Colours' function is defined elsewhere in your code
+    Colours
+
+    % Fetching the needed parameters
+    if ~isempty(varargin)
+        option = varargin{1};
+    else
+        option = [];
+    end
+    fhandle = getOr(option, 'fhandle', 233);
+    n_channel = size(tetrode, 1);
+    ch_to_plot = getOr(option, 'ch_to_plot', [1:n_channel]);
+
+    yLimit_all = [];
+    for ch_i = 1:length(ch_to_plot)
+        Channel_num = ch_to_plot(ch_i);
+        h = figure(fhandle);
+        subplot(n_channel/4, 4, Channel_num)
+        x1_all = waveforms{ch_i};
+        plot(x1_all, 'Color', [c_Black 0.05]);
+        box off
+        axis off
+        eval(sprintf('yLimit%d = get(gca, "YLim");', Channel_num))
+        eval(sprintf('yLimit_all = [yLimit_all yLimit%d];', Channel_num))
+        hold on
+    end
+    ylim_min = min(yLimit_all);
+    ylim_max = max(yLimit_all);
+    for Channel_num = 1:n_channel
+        h = figure(fhandle);
+        subplot(n_channel/4, 4, Channel_num)
+        ylim([ylim_min ylim_max])
+    end
+end
+
+
+
+
+
+
+
+
+
+
         function obj = update(obj,ppt ,varargin) % update the property of a unit
             p = length(varargin);
             if p>1
