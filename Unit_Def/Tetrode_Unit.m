@@ -182,65 +182,6 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
 
         end
 
-        %         function h = plot_traces_overlay(obj,tetrode,varargin)
-        %             Colours
-        %             if length(varargin)>1
-        %                 error("check")
-        %             end
-        %             if ~isempty(varargin)
-        %                 option = varargin{1}; % parameters supplied by user
-        %             else
-        %                 option = [];
-        %             end
-        %             fs = getOr(option, 'fs', 20000);
-        %             fslow = getOr(option, 'fslow', 3000);
-        %             fshigh = getOr(option, 'fshigh', 300);
-        %             window = getOr(option, 'window', [-0.001 0.002]);
-        %             fhandle = getOr(option, 'fhandle', 233);
-        %             evtTimes = getOr(option, 'evtTimes', obj.st);
-        %             trace_max_number = getOr(option, 'trace_max_number', 100); % [] for plot all
-        %             if ~isempty(trace_max_number)
-        %                 if length(evtTimes)>trace_max_number
-        %                     eventTimes_index = randperm(length(evtTimes),trace_max_number);
-        %                     evtTimes = evtTimes(eventTimes_index);
-        %                 end
-        %             end
-        %             n_channel = size(tetrode,1);
-        %             ch_extract = getOr(option, 'ch_extract', [1:n_channel]);
-        %
-        %             t = (1:size(tetrode,2))/fs;
-        %
-        %             % randomly poll 100 traces so it will not take forever to plot
-        %             rng(233)
-        %
-        %             yLimit_all = [];
-        %             for ch_i = 1:length(ch_extract)
-        %                 Channel_num = ch_extract(ch_i);
-        %                 channel = tetrode(Channel_num,:);
-        %                 [b1, a1] = butter(3, [fshigh/fs,fslow/fs]*2, 'bandpass'); % butterworth filter with only 3 nodes (otherwise it's unstable for float32)
-        %                 channel_filtered = filtfilt(b1,a1,channel);
-        %                 h = figure(fhandle);
-        %                 subplot(n_channel/4,4, Channel_num)
-        %                 [x1_all,~] = segment_with_onset_time(channel_filtered', t,  evtTimes, window);
-        %                 x1 = mean(x1_all,2);
-        %                 x1_std = std(x1_all,0,2);
-        %                 itv = 1/fs;
-        %                 tshow = 1000*(((1:length(x1))-1)*itv+window(1));% convert to ms
-        %                 pl = plot(x1_all, 'Color',[c_Black 0.05]);
-        %                 box off
-        %                 axis off
-        %                 eval(sprintf('yLimit%d = get(gca,"YLim");',Channel_num))
-        %                 eval(sprintf('yLimit_all = [yLimit_all yLimit%d];',Channel_num))
-        %                 hold on
-        %             end
-        %             ylim_min = min([yLimit_all]);
-        %             ylim_max = max([yLimit_all]);
-        %             for Channel_num = 1:n_channel
-        %                 h = figure(fhandle);
-        %                 subplot(n_channel/4,4, Channel_num)
-        %                 ylim([ylim_min ylim_max])
-        %             end
-        %         end
 
         function waveforms = calculate_waveforms(obj, tetrode, varargin)
             if length(varargin) > 1
@@ -255,7 +196,7 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
 
             window = getOr(option, 'window', [-0.001 0.002]);
             evtTimes = getOr(option, 'evtTimes', obj.st);
-            trace_max_number = getOr(option, 'trace_max_number', 100); % [] for plot all
+            trace_max_number = getOr(option, 'trace_max_number', 100); % -1 for plot all
             isFiltered = getOr(option, 'filtered', false);
             fullChannel = getOr(option, 'fullChannel', true);
 
@@ -273,6 +214,9 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
                 end
                 data_to_filter = tetrode;
             end
+            
+            t = (1:size(tetrode, 2)) / fs;
+            clear tetrode
 
             if ~isFiltered
                 fslow = getOr(option, 'fslow', 3000);
@@ -280,7 +224,9 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
                 [b1, a1] = butter(3, [fshigh/fs, fslow/fs] * 2, 'bandpass');
             end
 
-            if ~isempty(trace_max_number)
+            if trace_max_number == -1 % if plot all
+                
+            else
                 if length(evtTimes) > trace_max_number
                     rng(233) % Set seed for reproducibility
                     eventTimes_index = randperm(length(evtTimes), trace_max_number);
@@ -288,7 +234,7 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
                 end
             end
 
-            t = (1:size(tetrode, 2)) / fs;
+            
 
             waveforms = cell(1, length(ch_extract));
 
@@ -300,84 +246,15 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
             else
                 filtered_data = data_to_filter;
             end
-
+            clear data_to_filter
             % Now, loop over the channels just for the segmentation
             for ch_i = 1:length(ch_extract)
                 waveforms{ch_i} = segment_with_onset_time(filtered_data(ch_i, :)', t, evtTimes, window);
             end
 
-            %             for ch_i = 1:length(ch_extract)
-            %                 Channel_num = ch_extract(ch_i);
-            %                 channel = tetrode(Channel_num, :);
-            %
-            %                 if ~isFiltered
-            %                     channel_filtered = filtfilt(b1, a1, channel);
-            %                 else
-            %                     channel_filtered = channel;
-            %                 end
-            %
-            %                 waveforms{ch_i} = segment_with_onset_time(channel_filtered', t, evtTimes, window);
-            %             end
         end
 
-        %
-        %     n_channel = size(tetrode, 1);
-        %     ch_extract = getOr(option, 'ch_extract', [1:n_channel]);
-        %     t = (1:size(tetrode, 2)) / fs;
-        %
-        %     rng(233) % Set seed for reproducibility
-        %
-        %     waveforms = cell(1, length(ch_extract));
-        %     [b1, a1] = butter(3, [fshigh/fs, fslow/fs] * 2, 'bandpass');
-        %     for ch_i = 1:length(ch_extract)
-        %         Channel_num = ch_extract(ch_i);
-        %         channel = tetrode(Channel_num, :);
-        %
-        %         channel_filtered = filtfilt(b1, a1, channel);
-        %         waveforms{ch_i} = segment_with_onset_time(channel_filtered', t, evtTimes, window);
-        %     end
-        % end
 
-        %
-        %         function h = plot_traces_overlay(obj, tetrode, varargin)
-        %             % Fetching the needed parameters
-        %             if ~isempty(varargin)
-        %                 option = varargin{1};
-        %             else
-        %                 option = [];
-        %             end
-        %             waveforms = calculate_waveforms(obj, tetrode, option);
-        %
-        %             % Assuming the 'Colours' function is defined elsewhere in your code
-        %             Colours
-        %
-        %
-        %             fhandle = getOr(option, 'fhandle', 233);
-        %             n_channel = size(tetrode, 1);
-        %             ch_extract = getOr(option, 'ch_extract', [1:n_channel]);
-        %
-        %             % Preallocate yLimit_all
-        %             yLimit_all = zeros(1, length(ch_extract));
-        %
-        %             for ch_i = 1:length(ch_extract)
-        %                 Channel_num = ch_extract(ch_i);
-        %                 h = figure(fhandle);
-        %                 subplot(n_channel/4, 4, Channel_num)
-        %                 x1_all = waveforms{ch_i};
-        %                 plot(x1_all, 'Color', [c_Black 0.05]);
-        %                 box off
-        %                 axis off
-        %                 yLimit_all(ch_i) = max(get(gca, "YLim"));
-        %                 hold on
-        %             end
-        %             ylim_min = min(yLimit_all);
-        %             ylim_max = max(yLimit_all);
-        %             for Channel_num = 1:n_channel
-        %                 h = figure(fhandle);
-        %                 subplot(n_channel/4, 4, Channel_num)
-        %                 ylim([ylim_min ylim_max])
-        %             end
-        %         end
 
         function h = plot_traces_overlay(obj, tetrode, varargin)
             % Fetching the needed parameters
@@ -388,29 +265,16 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
             end
 
             waveforms = calculate_waveforms(obj, tetrode, option);
-
+            clear tetrode
             % Assuming the 'Colours' function is defined elsewhere in your code
             Colours
 
             fhandle = getOr(option, 'fhandle', 233);
             plot_all = getOr(option, 'plot_all', true);
             ch_extract = getOr(option, 'ch_extract', 1:16);
-            fullChannel = getOr(option, 'fullChannel', true);
-            if fullChannel
-                n_channel = size(tetrode, 1);
-                ch_extract = getOr(option, 'ch_extract', [1:n_channel]);
-                data_to_filter = tetrode(ch_extract, :);
-            else
-                defaultChNum = getOr(option, 'defaultChNum', 16);
-                n_channel = defaultChNum;
-                ch_extract = getOr(option, 'ch_extract', []);
-                if isempty(ch_extract)
-                    error('Please tell me which channel you picked.')
-                end
-                data_to_filter = tetrode;
-            end
+
             % Preallocate yLimit_all
-            yLimit_all = nan(2, ch_extract);
+            yLimit_all = nan(2, length(ch_extract));
 
             if plot_all
                 n_channel = 16;
@@ -419,7 +283,11 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
                     h = figure(fhandle);
                     subplot(n_channel/4, 4, Channel_num)
                     x1_all = waveforms{ch_i};
-                    plot(x1_all, 'Color', [c_Black 0.05]);
+                    if length(x1_all)>100
+                        plot(x1_all, 'Color', [c_Black 0.05/20],LineWidth=0.1);
+                    else
+                        plot(x1_all, 'Color', [c_Black 0.05]);
+                    end
                     box off
                     axis off
                     yLimit_all(:,ch_i) = get(gca, "YLim");
@@ -430,7 +298,11 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
                     h = figure(fhandle);
                     subplot(1, length(ch_extract), ch_i)
                     x1_all = waveforms{ch_i};
-                    plot(x1_all, 'Color', [c_Black 0.05]);
+                    if length(x1_all)>100
+                        plot(x1_all, 'Color', [c_Black 0.05/20],LineWidth=0.1);
+                    else
+                        plot(x1_all, 'Color', [c_Black 0.05]);
+                    end
                     box off
                     axis off
                     yLimit_all(:,ch_i) = max(get(gca, "YLim"));
