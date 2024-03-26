@@ -42,9 +42,14 @@ function [evoked_spk,spk_latency_ms,jitter_ms,prob_spk] = light_evoked_spikes(sp
 
 %       isplot: show plot or not. default 0
 
+%       plotlight: plot the light stimuli.default 1.
+
+% plotcycle: cycle the evoked spikes. default 1.
+
 %       stimuli_colour: default color for ploting the light pulse. default cyan.
 
 %       saveplot: save figure or not. defacult 0.
+
 
 
 % OUTPUT
@@ -92,6 +97,8 @@ count_before_light = getOr(option,'count_before_light',0);
 latency_est = getOr(option,'latency_est',2/1000);
 % seting for ploting.
 isplot = getOr(option, 'isplot', 0);
+plotlight = getOr(option,'plotlight',1);
+plotcycle = getOr(option,'plotcycle',1);
 stimuli_colour = getOr(option,'stimuli_colour','cyan');
 saveplot = getOr(option, 'saveplot', 0);
 
@@ -297,8 +304,9 @@ if one_spk_only
         end
     end
     if isplot
-
-        plot_light_stimuli(stim_grouped_j,stimuli_colour)
+        if plotlight
+            plot_light_stimuli(stim_grouped_j,stimuli_colour)
+        end
         xlim([min(bins_base) max(bins_base)])
         xlabel('Time from trail onset (s)')
         ylabel ('Trial number')
@@ -323,8 +331,9 @@ else %plot all the evoked spikes. Ignore the jitter window.
         nonNanIdx = ~isnan(rasterX0) & ~isnan(rasterY0); % Get indices where neither of the arrays is NaN
         filtered_rasterX0 = rasterX0(nonNanIdx); % Filter NaN values from rasterX0
         filtered_rasterY0 = rasterY0(nonNanIdx); % Filter NaN values from rasterY0
-
-        plot(filtered_rasterX0, filtered_rasterY0, 'ro');
+        if plotcycle
+            plot(filtered_rasterX0, filtered_rasterY0, 'ro');
+        end
     end
     evoked_spk_lo = rasterX0;
     spk_latency_lo_ms = (mean(evoked_spk_lo,"omitnan")-light_onset)*1000;
