@@ -41,7 +41,7 @@ classdef Tet_Light_Unit_Dual < Tet_Light_Unit
             % check with the method in Smear 2011
             lightStimuliTimes = obj.Light_Onsets_Medial;
             controlCycles = calculate_control_cycles(sniffonsets, lightStimuliTimes);
-            light_response = check_light_stim_response_Smear(spiketime, stim_grouped, controlCycles, option)
+            light_response = check_light_stim_response_Smear(spiketime, stim_grouped, controlCycles, option);
             % Update object properties
             obj.update("Light_Response_Medial", light_response, stim_grouped);
 
@@ -77,7 +77,7 @@ classdef Tet_Light_Unit_Dual < Tet_Light_Unit
                     Intensity = DrivingCurrent_2_Intensity(DrivingCurrent, Current2Power);
                     Stim_Grouped_Medial(stm).Intensity = Intensity;
                 end
-                obj.Stimuli_Grouped = Stim_Grouped_Medial;
+                obj.Stimuli_Grouped_Medial = Stim_Grouped_Medial;
             end
         end
 

@@ -1,5 +1,6 @@
 classdef Tet_Light_Unit < Tetrode_Unit
     properties %
+        Light_Onsets
         Stimuli_Info % stimuli, unsorted
         Stimuli_Grouped % a sructure of odour stimuli.
         Light_Response % a structure with grouped stimuli and response.
@@ -31,8 +32,15 @@ classdef Tet_Light_Unit < Tetrode_Unit
             %             sniff_spon = obj.Spontaneous_SniffOnset;
             sniffonsets = obj.SniffOnset;
 
-            % Check light response using dedicated function
-            light_response = check_light_response_ttest(spiketime, stim_grouped, sniffonsets, option);
+            % Check light response using dedicated function. not used
+            % anymore
+            %             light_response = check_light_response_ttest(spiketime, stim_grouped, sniffonsets, option);
+
+            % check with the method in Smear 2011
+            lightStimuliTimes = obj.Light_Onsets;
+            controlCycles = calculate_control_cycles(sniffonsets, lightStimuliTimes);
+            light_response = check_light_stim_response_Smear(spiketime, stim_grouped, controlCycles, option);
+
 
             % Update object properties
             obj.update("Light_Response", light_response, stim_grouped);
