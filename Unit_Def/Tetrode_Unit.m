@@ -85,7 +85,15 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
 
                 end
                 figure
-                plot(rasterX_SP,rasterY_SP,'.')
+                %                 plot(rasterX_SP,rasterY_SP,'.')
+                [binnedArray, bins] = timestampsToBinned(spiketime, baseline_sniff_onset, binSize, calcWindow);
+                binnedArray_SP = binnedArray;
+                [tr,b] = find(binnedArray_SP);
+                [rasterX,yy] = rasterize(bins(b));
+                rasterY = yy+reshape([zeros(size(tr'));tr';zeros(size(tr'))],1,length(tr)*3);
+                rasterX(rasterY==0) = [];rasterY(rasterY==0) = [];% remove zeros
+                plot(rasterX, rasterY,'.')
+
             end
         end
         function [bins_base, fr_base] = get_baseline_sniff_phase_uniform(obj,varargin) % calculate the baseline sniff coupling in phase
@@ -272,6 +280,7 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
             fhandle = getOr(option, 'fhandle', 233);
             plot_all = getOr(option, 'plot_all', true);
             ch_extract = getOr(option, 'ch_extract', 1:16);
+            plot_alpha = getOr(option, 'plot_alpha', []);
 
             % Preallocate yLimit_all
             yLimit_all = nan(2, length(ch_extract));
@@ -283,10 +292,14 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
                     h = figure(fhandle);
                     subplot(n_channel/4, 4, Channel_num)
                     x1_all = waveforms{ch_i};
-                    if length(x1_all)>100
-                        plot(x1_all, 'Color', [c_Black 0.05/20],LineWidth=0.1);
+                    if isempty(plot_alpha)
+                        if length(x1_all)>100
+                            plot(x1_all, 'Color', [c_Black 0.05/20],LineWidth=0.1);
+                        else
+                            plot(x1_all, 'Color', [c_Black 0.05]);
+                        end
                     else
-                        plot(x1_all, 'Color', [c_Black 0.05]);
+                        plot(x1_all, 'Color', [c_Black plot_alpha]);
                     end
                     box off
                     axis off
@@ -298,10 +311,14 @@ classdef Tetrode_Unit<dynamicprops  % works well for handle. use dynamicprops be
                     h = figure(fhandle);
                     subplot(1, length(ch_extract), ch_i)
                     x1_all = waveforms{ch_i};
-                    if length(x1_all)>100
-                        plot(x1_all, 'Color', [c_Black 0.05/20],LineWidth=0.1);
+                    if isempty(plot_alpha)
+                        if length(x1_all)>100
+                            plot(x1_all, 'Color', [c_Black 0.05/20],LineWidth=0.1);
+                        else
+                            plot(x1_all, 'Color', [c_Black 0.05]);
+                        end
                     else
-                        plot(x1_all, 'Color', [c_Black 0.05]);
+                        plot(x1_all, 'Color', [c_Black plot_alpha]);
                     end
                     box off
                     axis off
