@@ -16,6 +16,7 @@ Unit in optogenetic sessions, dual core. Two cores used together
 
 ## Helper_fun
 Functions for processing. See details in each file
+
 'DrivingCurrent_2_Intensity.m'
 'Light_on_Sniff_2D.m'
 'Plot_100_traces_MeanSTD.m'
