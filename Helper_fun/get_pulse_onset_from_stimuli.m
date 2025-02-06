@@ -1,0 +1,12 @@
+function pulse_onset = get_pulse_onset_from_stimuli(stim_grouped_j, i)
+if i > stim_grouped_j.PulseNumber
+    error('i exceeds the PulseNumber in stim_grouped_j.');
+end
+
+% Calculate the onset
+try
+    pulse_onset = stim_grouped_j.TrialOnset + (1/stim_grouped_j.Frequency) * (i - 1);
+catch
+    pulse_onset = stim_grouped_j.TrailOnset + (1/stim_grouped_j.Frequency) * (i - 1);
+end
+end

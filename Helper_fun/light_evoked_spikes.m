@@ -153,7 +153,9 @@ rasterX = raw_rasterX(raw_mask);
 rasterY = raw_rasterY(raw_mask);% Remove NaNs
 if isplot
     figure
+%     subplot 236
     pl1 = plot(rasterX, rasterY,'.'); hold on
+    ylim([0 length(eventtime)])
 end
 
 %%     find the peak after the onset for the light evoked stimuli
@@ -217,8 +219,9 @@ if one_spk_only
                 nonNanIdx = ~isnan(rasterX0) & ~isnan(rasterY0); % Get indices where neither of the arrays is NaN
                 filtered_rasterX0 = rasterX0(nonNanIdx); % Filter NaN values from rasterX0
                 filtered_rasterY0 = rasterY0(nonNanIdx); % Filter NaN values from rasterY0
-
-                plot(filtered_rasterX0, filtered_rasterY0, 'ro');
+                if plotcycle
+                    plot(filtered_rasterX0, filtered_rasterY0, 'ro');
+                end
             end
             evoked_spk_lo = rasterX0;
             spk_latency_lo_ms = (mean(evoked_spk_lo,"omitnan")-light_onset)*1000;
@@ -288,8 +291,9 @@ if one_spk_only
                     nonNanIdx = ~isnan(rasterX0) & ~isnan(rasterY0); % Get indices where neither of the arrays is NaN
                     filtered_rasterX0 = rasterX0(nonNanIdx); % Filter NaN values from rasterX0
                     filtered_rasterY0 = rasterY0(nonNanIdx); % Filter NaN values from rasterY0
-
-                    plot(filtered_rasterX0, filtered_rasterY0, 'ro');
+                    if plotcycle
+                        plot(filtered_rasterX0, filtered_rasterY0, 'ro');
+                    end
                 end
                 evoked_spk_lo = rasterX0;
                 spk_latency_lo_ms = (mean(evoked_spk_lo,"omitnan")-light_onset)*1000;
@@ -308,6 +312,7 @@ if one_spk_only
             plot_light_stimuli(stim_grouped_j,stimuli_colour)
         end
         xlim([min(bins_base) max(bins_base)])
+        ylim([0 length(eventtime)])
         xlabel('Time from trail onset (s)')
         ylabel ('Trial number')
         %     legend([pl1 pl2], {"Spikes","Light evoked Spikes"},'Location','southoutside')

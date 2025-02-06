@@ -16,7 +16,7 @@ function odour_evoked_grouped = check_odour_response(spiketime, stim_grouped, va
 
         % Retrieve or set default parameters
         calcWindow_FVon = getOr(option, 'calcWindow', [0, 1.5]);
-        calcWindow_beforeFV = getOr(option, 'calcWindow', [-1.5 0]);
+        calcWindow_beforeFV = getOr(option, 'calcWindow_beforeFV', [-1.5 0]);
         binSize = getOr(option, 'binSize', 0.5);
         isplot = getOr(option, 'isplot', 0);
         saveplot = getOr(option, 'saveplot', 0);
